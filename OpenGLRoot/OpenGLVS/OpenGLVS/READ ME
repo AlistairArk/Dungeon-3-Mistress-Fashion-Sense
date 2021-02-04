@@ -1,0 +1,16 @@
+=== Info ===
+This program was built in visual studio.
+
+
+=== COMMANDS ===
+Commands are invoked by having the program window selected and pressing one of the following keys on your keyboard.
+Prompts and inputs will show up in the console window.
+
+Key Command List:
+    S - Save the current mesh as a .obj file
+    L - Load a .obj file from the current working directory
+
+    UP_ARROW,DOWN_ARROW,LEFT_ARROW,RIGHT_ARROW  - Rotate the scene view
+
+
+Note, when saving and loading files, you are not required to enter the .obj file extension.
