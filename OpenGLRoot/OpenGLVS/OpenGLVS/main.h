@@ -95,11 +95,21 @@ struct velocity {
     float z = 0;
 };
 
+struct force {
+    float x = 0;
+    float y = 0;
+    float z = 0;
+};
+
 struct vElement {
     float x = 0;
     float y = 0;
     float z = 0;
-    velocity v;
+
+    velocity v; // velocity
+    velocity f; // force
+    float mass = 1;
+
     bool fixed = false;
     std::set<int> fIndex;       // index of all connecting faces to this point
     std::list<float> fDistance;    // base distance the vertex is from the connecting vertex
@@ -140,12 +150,30 @@ std::string fFilename = "Untitled_Mesh"; // Mesh Name
 
 void SimulateNextFrame();
 vElement PhysicsPoint(vElement v);
-vElement PhysicsSpring(vElement v);
+void PhysicsSpring(int pInde);
+vElement PhysicsApply(vElement v);
 vElement PhysicsBounds(vElement v);
 vElement LogVertexDistances(vElement v);
 
-float springTension = 0.05;
-float springStrength = 0.0001;
-float friction = 0.2;
+float friction     = 0.2;
+bool enableGravity = true;
+float damp         = 0.00099;
+float timeStep     = 0.0001f;
+
+// k is a very important constant; if too low, the cloth will sag unrealistically:
+float k = 50; // srping constant
+
+
+struct Gravity {
+    float x = 0;
+    float y = -9.81;
+    float z = 0;
+};
+
+Gravity gravity;
+
+
+// float springTension = 0.05;
+// float springStrength = 0.0001;
 // float gravity = -0.000981;
-float gravity = -0.000981 *.5;
+// float gravity = -0.000981 *.5;

@@ -1,6 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "main.h"
-bool debug = true;
+bool debug = false;
 
 
 
@@ -26,131 +26,132 @@ float VertexDistance(vElement p1, vElement p2){
 }
 
 
+vElement Normalize(vElement v){
 
-vElement PhysicsSpring(vElement v) {
+    float length = sqrt ( pow(v.x,2) + pow(v.y,2) + pow(v.z,2) );
 
-    // std::cout << "===== SPRING VERT =====\n";
+    v.x = v.x / length; 
+    v.y = v.y / length; 
+    v.z = v.z / length; 
+
+    return v; 
+}
+
+
+
+
+void PhysicsSpring(int pIndex) {
+
+    if (debug) std::cout<< "\nPhysicsSpring index: " << pIndex << "\n---------------------" << std::endl;
+
+
+
+    // vElement p1 = (*std::next(vList.begin(), pIndex));
+    // vElement p2;
+    vElement springVector;
+    vElement force;
+
 
     // Creating a iterator pointing to start of set
-    std::set<int>::iterator it = v.fIndex.begin();
-
-
-    int i=-1; 
-    // Iterate till the end of set
-    while (it != v.fIndex.end()) {
-
+    std::set<int>::iterator it = (*std::next(vList.begin(), pIndex)).fIndex.begin();
+    int i=-1;
+    while (it != (*std::next(vList.begin(), pIndex)).fIndex.end()) { // Iterate till the end of set
         i++;
-
-        // Print the element
-        vElement v2 = (*std::next(vListCopy.begin(), (*it)));
-        float vDistance = VertexDistance( v, v2 );
-
-        vElement v3; // calculate vector direction
- 
-        // // std::cout << "STORED DIST: " << (*std::next(v.fDistance.begin(), i)) << "\t\tCURRENT DIST: " << vDistance << "\n";
-        // if ( vDistance > (*std::next(v.fDistance.begin(), i)) + springTension ) {           // push towards the point
-        //     std::cout << "Push towards point\n";
-        //     v.v.x = 0;
-        //     v.v.y = 0;
-        //     v.v.z = 0;
-
-        // }
-
-        // std::cout << "STORED DIST: " << (*std::next(v.fDistance.begin(), i)) << "\t\tCURRENT DIST: " << vDistance << "\n";
-        if ( vDistance > (*std::next(v.fDistance.begin(), i)) + springTension ) {           // push towards the point
-            // std::cout << "Push towards point\n";
-            // zero current velocity
-            v.v.x = -v.v.x*friction;
-            v.v.y = -v.v.y*friction;
-            v.v.z = -v.v.z*friction;
-
-            // get vector in direction in point
-            v3.x = v2.x - v.x;
-            v3.y = v2.y - v.y;
-            v3.z = v2.z - v.z;
-        }
-
-        // add velocity
-        v.v.x += v3.x * springStrength;
-        v.v.y += v3.y * springStrength;
-        v.v.z += v3.z * springStrength;
-
-        // // std::cout << "STORED DIST: " << (*std::next(v.fDistance.begin(), i)) << "\t\tCURRENT DIST: " << vDistance << "\n";
-        // if ( vDistance > (*std::next(v.fDistance.begin(), i)) + springTension ) {           // push towards the point
-        //     std::cout << "Push towards point\n";
-        //     v.v.x += 0;
-        //     v.v.y += 0;
-        //     v.v.z += 0;
-        // } else if ( vDistance < (*std::next(v.fDistance.begin(), i)) - springTension ) {    // push away from point
-        //     std::cout << "Too close, push away from point back\n";
-        //     v.v.x += 0;
-        //     v.v.y += 0;
-        //     v.v.z += 0;
-        // }
+        if (debug && i>0) std::cout << "------------------------------------------" << std::endl;
 
 
-        // // std::cout << "STORED DIST: " << (*std::next(v.fDistance.begin(), i)) << "\t\tCURRENT DIST: " << vDistance << "\n";
-        // if ( vDistance > (*std::next(v.fDistance.begin(), i)) + springTension ) {           // push towards the point
-        //     std::cout << "Push towards point\n";
-        //     v3.x = v2.x - v.x;
-        //     v3.y = v2.y - v.y;
-        //     v3.z = v2.z - v.z;
-        // } else if ( vDistance < (*std::next(v.fDistance.begin(), i)) - springTension ) {    // push away from point
-        //     std::cout << "Too close, push away from point back\n";
-        //     v3.x = (v2.x - v.x);
-        //     v3.y = (v2.y - v.y);
-        //     v3.z = (v2.z - v.z);
-        // }
+        vElement p1 = (*std::next(vList.begin(), pIndex));
+        vElement p2 = (*std::next(vList.begin(), (*it)));
+        if (debug) std::cout << "\tP1 - Pos         (" << (*std::next(vList.begin(), pIndex)).x << ", " << (*std::next(vList.begin(), pIndex)).y << ", " << (*std::next(vList.begin(), pIndex)).z << ")" << std::endl;
+        if (debug) std::cout << "\tP2 - Pos         (" << (*std::next(vList.begin(), (*it))).x << ", " << (*std::next(vList.begin(), (*it))).y << ", " << (*std::next(vList.begin(), (*it))).z << ")" << std::endl;
 
-        // v.v.x += v3.x * springTension;
-        // v.v.y += v3.y * springTension;
-        // v.v.z += v3.z * springTension;
+        // X(current) is just the current length of the spring, and X(rest), the spring's rest length, needs to be stored in each spring structure. 
+        springVector.x = p1.x - p2.x;
+        springVector.y = p1.y - p2.y;
+        springVector.z = p1.z - p2.z;
 
-        //Increment the iterator
-        it++;
+        float xCurrent  = VertexDistance(p1, p2);
+        float xRest     = (*std::next(p1.fDistance.begin(), i));
+        float distanceFromRest = xCurrent-xRest;
+        if (debug) std::cout << "\tdistanceFromRest: " << distanceFromRest << std::endl;
+
+
+        float hookesValue = -k * distanceFromRest;
+        if (debug) std::cout << "\thookesValue:      " << hookesValue << std::endl;
+
+
+        springVector = Normalize(springVector);
+        if (debug) std::cout << "\tspringVector     (" << springVector.x << ", " << springVector.y << ", " << springVector.z << ")" << std::endl;
+
+        // calculate force
+        force.x = ( springVector.x * hookesValue );
+        force.y = ( springVector.y * hookesValue );
+        force.z = ( springVector.z * hookesValue );
+        if (debug) std::cout << "\tforce            (" << force.x << ", " << force.y << ", " << force.z << ")" << std::endl;
+
+        if (debug) std::cout << "\tP1 - PreForce    (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+        p1.f.x = ( p1.f.x + force.x);
+        p1.f.y = ( p1.f.y + force.y);
+        p1.f.z = ( p1.f.z + force.z);
+        if (debug) std::cout << "\tP1 - PostForce   (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+        (*std::next(vList.begin(), pIndex)).f = p1.f;
+        if (debug) std::cout << "\tP1 - STOREDForce (" << (*std::next(vList.begin(), pIndex)).f.x << ", " << (*std::next(vList.begin(), pIndex)).f.y << ", " << (*std::next(vList.begin(), pIndex)).f.z << ")" << std::endl;
+
+        p2.f.x = ( p2.f.x - force.x);
+        p2.f.y = ( p2.f.y - force.y);
+        p2.f.z = ( p2.f.z - force.z);
+        (*std::next(vList.begin(), (*it))).f  = p2.f;
+
+
+        // distanceFromRest  = k*(xCurrent-xRest);
+        it++; //Increment the iterator
     }
 
-    return v;
+    if (debug) std::cout<< "\n";
+
+}
+
+
+vElement PhysicsApply(vElement p1) {
+
+    if (!p1.fixed){
+        if (debug) std::cout << "\tGravity         (" << gravity.x << ", " << gravity.y << ", " << gravity.z << ")" << std::endl;
+
+        // if(!particles[i].isStationary()) {
+        if(enableGravity) {
+            p1.f.x = (p1.f.x + gravity.x * p1.mass);
+            p1.f.y = (p1.f.y + gravity.y * p1.mass);
+            p1.f.z = (p1.f.z + gravity.z * p1.mass);
+        }
+        if (debug) std::cout << "\tP1 - Force+Grav (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+
+        // particles[i].setVelocity(particles[i].getVelocity() + (particles[i].getForce() / (particles[i].getMass() * timeStep)));
+        p1.v.x = p1.v.x + ( p1.f.x / (p1.mass*timeStep) );
+        p1.v.y = p1.v.y + ( p1.f.y / (p1.mass*timeStep) );
+        p1.v.z = p1.v.z + ( p1.f.z / (p1.mass*timeStep) );
+
+        // particles[i].setVelocity(particles[i].getVelocity() * damp);
+        p1.v.x = p1.v.x * damp;
+        p1.v.y = p1.v.y * damp;
+        p1.v.z = p1.v.z * damp;
+
+        // particles[i].setPosition(particles[i].getPosition() + (particles[i].getVelocity() * timeStep));
+        p1.x = p1.x + (p1.v.x * timeStep);
+        p1.y = p1.y + (p1.v.y * timeStep);
+        p1.z = p1.z + (p1.v.z * timeStep);
+
+        // particles[i].setForce(Vector(0.0f, 0.0f, 0.0f));
+        p1.f.x = 0;
+        p1.f.y = 0;
+        p1.f.z = 0;        
+    }
+
+    return p1;
 }
 
 
 
 
-// calculate physics for a single point - return new point velocity
-vElement PhysicsPoint(vElement v) {
-
-    /*
-    
-    Fnet(v) = Mg + Fwind + Fair resist. - |    SumOf    | k(Xcurrent - Xrest) = Ma
-                                          | Springs E v | 
-
-    M           = Mass of a vertex
-    g           = gravity vector = (0,-9.8, 0)
-    k           = spring constant
-    Xcurrent    = current length of spring
-    Xrest       = rest (initial) length of spring
-    Fwind       = wind vector
-    Fair resist.= -a*velocity(v)^2
-
-    */
-
-    vElement springsSum = PhysicsSpring(v);
-
-
-
-    // v.v.y += gravity;
-
-
-    // v = PhysicsSpring(v);
-
-    // v = PhysicsBounds(v);
-
-    v.x += v.v.x;
-    v.y += v.v.y;
-    v.z += v.v.z;
-    return v;
-
-}
 
 
 void SimulateNextFrame() {
@@ -158,19 +159,30 @@ void SimulateNextFrame() {
     std::list<vElement> vListCopy2(vList);
     vListCopy = vListCopy2;
 
-    //std::list<vElement> vList;
-    int i = -1;
+    int i;
+
     std::list<vElement>::iterator it;
-    
+    i = -1;
     for (it = vList.begin(); it != vList.end(); it++) {
-        
         i++;
-        //std::cout << "(" << it->x << ", " << it->y << ", " << it->z << ") "<< std::endl;
-        if (i != 0 && i != 4) (*std::next(vList.begin(), i)) = PhysicsPoint( (*std::next(vList.begin(), i)) );
-        // (*std::next(vList.begin(), i)) = PhysicsPoint( (*std::next(vList.begin(), i)) );
-        
+
+        PhysicsSpring( i );
+        // if (i==0) std::cout << (*std::next(vList.begin(), i)).f.x << "\n";
     }
 
+
+    i = -1;
+    for (it = vList.begin(); it != vList.end(); it++) {
+        i++;
+        
+        if (debug) std::cout<< "\nPhysicsApply index: " << i << "\n---------------------" << std::endl;
+        if (debug && i>0) std::cout << "------------------------------------------" << std::endl;
+
+        (*std::next(vList.begin(), i)) = PhysicsApply( (*std::next(vList.begin(), i)) );
+        std::cout << " \n";
+        // if (i != 0 && i != 4) (*std::next(vList.begin(), i)) = PhysicsApply( (*std::next(vList.begin(), i)) );
+        // if (i==0) std::cout << (*std::next(vList.begin(), i)).f.x << "\n";
+    }
 }
 
 
@@ -187,7 +199,7 @@ void SetOBJHeight(int height) {
         i++;
         (*std::next(vList.begin(), i)).y += height;
 
-        std::cout << "(" << it->x << ", " << it->y << ", " << it->z << ") " << std::endl;
+        // std::cout << "(" << it->x << ",\t" << it->y << ",\t" << it->z << ") " << std::endl;
 
     }
 }
@@ -206,10 +218,10 @@ int CreateOBJ(std::string objFile){
     while (y != sizeY){
         
         int x = 0;
-        std::cout<< "" <<std::endl;
+        // std::cout<< "" <<std::endl;
         while (x != sizeX){
 
-            std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
+            // std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
 
             vElement v;
             v.x = x+offsetX;
@@ -230,14 +242,14 @@ int CreateOBJ(std::string objFile){
     while (y != sizeY-1){
         
         int x = 0;
-        std::cout<< "" <<std::endl;
+        // std::cout<< "" <<std::endl;
         while (x != sizeX-1){
 
             int i = (sizeX * y) + x + 1;
-            std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
-            std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
-            std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
-            std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//"       <<std::endl;
+            // std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
+            // std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
+            // std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
+            // std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//"       <<std::endl;
             i-=1;
 
             fElement f;
@@ -325,12 +337,16 @@ int main( void )
     CreateOBJ("cloth");
     SaveOBJ("cloth.obj");
     LoadOBJ("cloth.obj");
-    SetOBJHeight(4);
+
+    (*std::next(vList.begin(), 0)).fixed = true;
+    (*std::next(vList.begin(), 4)).fixed = true;
+
+    SetOBJHeight(5);
     togglePlayClip = true;
 
     // // simulate 1 frame
     SimulateNextFrame();
-    int itLimit = 170;
+    int itLimit = 1;
 
 
 
@@ -358,11 +374,11 @@ int main( void )
 
 
             if (togglePlayClip) {
-                // itLimit--;
-                // if (itLimit>0) {
-                    // std::cout << "\n\n\n\n";
+                if (debug) itLimit--;
+                if (itLimit>0) {
+                    std::cout << "\n\n\n\n";
                     SimulateNextFrame();      // Function to simulate the next frame
-                // }
+                }
                 // SetFrame(currentFrame+1); // KEEP AT CURRENT FRAME FOR NOW
             }
 
@@ -470,7 +486,7 @@ vElement LogVertexDistances(vElement v) {
 
     // Creating a iterator pointing to start of set
     std::set<int>::iterator it = v.fIndex.begin();
-    std::cout << "> DISTANCES";
+    // std::cout << "> DISTANCES";
     
     // Iterate till the end of set
     while (it != v.fIndex.end()) {
@@ -478,7 +494,7 @@ vElement LogVertexDistances(vElement v) {
         // log the distance between the two verticies
         v.fDistance.push_back( VertexDistance( v, (*std::next(vList.begin(), (*it))) ) );
 
-        std::cout << "   " << (*it) << "_" << VertexDistance( v, (*std::next(vList.begin(), (*it))) );
+        // std::cout << "   " << (*it) << "_" << VertexDistance( v, (*std::next(vList.begin(), (*it))) );
 
         //Increment the iterator
         it++;
