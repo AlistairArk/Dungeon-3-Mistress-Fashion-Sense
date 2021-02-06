@@ -1,295 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "main.h"
 bool debug = false;
-
-
-
-
-
-
-// calculate particle vector if particle hits a boundary - return new vector
-vElement PhysicsBounds(vElement v) {
-
-    if (v.y < 0) {
-        v.y = 0;
-        v.v.y = -v.v.y*friction;
-    }
-    
-    return v;
-}
-
-
-
-
-float VertexDistance(vElement p1, vElement p2){
-    return sqrt(pow(p1.x-p2.x, 2)+pow(p1.y-p2.y, 2));
-}
-
-
-vElement Normalize(vElement v){
-
-    float length = sqrt ( pow(v.x,2) + pow(v.y,2) + pow(v.z,2) );
-
-    v.x = v.x / length; 
-    v.y = v.y / length; 
-    v.z = v.z / length; 
-
-    return v; 
-}
-
-
-
-
-void PhysicsSpring(int pIndex) {
-
-    if (debug) std::cout<< "\nPhysicsSpring index: " << pIndex << "\n---------------------" << std::endl;
-
-
-
-    // vElement p1 = (*std::next(vList.begin(), pIndex));
-    // vElement p2;
-    vElement springVector;
-    vElement force;
-
-
-    // Creating a iterator pointing to start of set
-    std::set<int>::iterator it = (*std::next(vList.begin(), pIndex)).fIndex.begin();
-    int i=-1;
-    while (it != (*std::next(vList.begin(), pIndex)).fIndex.end()) { // Iterate till the end of set
-        i++;
-        if (debug && i>0) std::cout << "------------------------------------------" << std::endl;
-
-
-        vElement p1 = (*std::next(vList.begin(), pIndex));
-        vElement p2 = (*std::next(vList.begin(), (*it)));
-        if (debug) std::cout << "\tP1 - Pos         (" << (*std::next(vList.begin(), pIndex)).x << ", " << (*std::next(vList.begin(), pIndex)).y << ", " << (*std::next(vList.begin(), pIndex)).z << ")" << std::endl;
-        if (debug) std::cout << "\tP2 - Pos         (" << (*std::next(vList.begin(), (*it))).x << ", " << (*std::next(vList.begin(), (*it))).y << ", " << (*std::next(vList.begin(), (*it))).z << ")" << std::endl;
-
-        // X(current) is just the current length of the spring, and X(rest), the spring's rest length, needs to be stored in each spring structure. 
-        springVector.x = p1.x - p2.x;
-        springVector.y = p1.y - p2.y;
-        springVector.z = p1.z - p2.z;
-
-        float xCurrent  = VertexDistance(p1, p2);
-        float xRest     = (*std::next(p1.fDistance.begin(), i));
-        float distanceFromRest = xCurrent-xRest;
-        if (debug) std::cout << "\tdistanceFromRest: " << distanceFromRest << std::endl;
-
-
-        float hookesValue = -k * distanceFromRest;
-        if (debug) std::cout << "\thookesValue:      " << hookesValue << std::endl;
-
-
-        springVector = Normalize(springVector);
-        if (debug) std::cout << "\tspringVector     (" << springVector.x << ", " << springVector.y << ", " << springVector.z << ")" << std::endl;
-
-        // calculate force
-        force.x = ( springVector.x * hookesValue );
-        force.y = ( springVector.y * hookesValue );
-        force.z = ( springVector.z * hookesValue );
-        if (debug) std::cout << "\tforce            (" << force.x << ", " << force.y << ", " << force.z << ")" << std::endl;
-
-        if (debug) std::cout << "\tP1 - PreForce    (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
-        p1.f.x = ( p1.f.x + force.x);
-        p1.f.y = ( p1.f.y + force.y);
-        p1.f.z = ( p1.f.z + force.z);
-        if (debug) std::cout << "\tP1 - PostForce   (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
-        (*std::next(vList.begin(), pIndex)).f = p1.f;
-        if (debug) std::cout << "\tP1 - STOREDForce (" << (*std::next(vList.begin(), pIndex)).f.x << ", " << (*std::next(vList.begin(), pIndex)).f.y << ", " << (*std::next(vList.begin(), pIndex)).f.z << ")" << std::endl;
-
-        p2.f.x = ( p2.f.x - force.x);
-        p2.f.y = ( p2.f.y - force.y);
-        p2.f.z = ( p2.f.z - force.z);
-        (*std::next(vList.begin(), (*it))).f  = p2.f;
-
-
-        // distanceFromRest  = k*(xCurrent-xRest);
-        it++; //Increment the iterator
-    }
-
-    if (debug) std::cout<< "\n";
-
-}
-
-
-vElement PhysicsApply(vElement p1) {
-
-    if (!p1.fixed){
-        if (debug) std::cout << "\tGravity         (" << gravity.x << ", " << gravity.y << ", " << gravity.z << ")" << std::endl;
-
-        // if(!particles[i].isStationary()) {
-        if(enableGravity) {
-            p1.f.x = (p1.f.x + gravity.x * p1.mass);
-            p1.f.y = (p1.f.y + gravity.y * p1.mass);
-            p1.f.z = (p1.f.z + gravity.z * p1.mass);
-        }
-        if (debug) std::cout << "\tP1 - Force+Grav (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
-
-        // particles[i].setVelocity(particles[i].getVelocity() + (particles[i].getForce() / (particles[i].getMass() * timeStep)));
-        p1.v.x = p1.v.x + ( p1.f.x / (p1.mass*timeStep) );
-        p1.v.y = p1.v.y + ( p1.f.y / (p1.mass*timeStep) );
-        p1.v.z = p1.v.z + ( p1.f.z / (p1.mass*timeStep) );
-
-        // particles[i].setVelocity(particles[i].getVelocity() * damp);
-        p1.v.x = p1.v.x * damp;
-        p1.v.y = p1.v.y * damp;
-        p1.v.z = p1.v.z * damp;
-
-        // particles[i].setPosition(particles[i].getPosition() + (particles[i].getVelocity() * timeStep));
-        p1.x = p1.x + (p1.v.x * timeStep);
-        p1.y = p1.y + (p1.v.y * timeStep);
-        p1.z = p1.z + (p1.v.z * timeStep);
-
-        // particles[i].setForce(Vector(0.0f, 0.0f, 0.0f));
-        p1.f.x = 0;
-        p1.f.y = 0;
-        p1.f.z = 0;        
-    }
-
-    return p1;
-}
-
-
-
-
-
-
-void SimulateNextFrame() {
-
-    std::list<vElement> vListCopy2(vList);
-    vListCopy = vListCopy2;
-
-    int i;
-
-    std::list<vElement>::iterator it;
-    i = -1;
-    for (it = vList.begin(); it != vList.end(); it++) {
-        i++;
-
-        PhysicsSpring( i );
-        // if (i==0) std::cout << (*std::next(vList.begin(), i)).f.x << "\n";
-    }
-
-
-    i = -1;
-    for (it = vList.begin(); it != vList.end(); it++) {
-        i++;
-        
-        if (debug) std::cout<< "\nPhysicsApply index: " << i << "\n---------------------" << std::endl;
-        if (debug && i>0) std::cout << "------------------------------------------" << std::endl;
-
-        (*std::next(vList.begin(), i)) = PhysicsApply( (*std::next(vList.begin(), i)) );
-        std::cout << " \n";
-        // if (i != 0 && i != 4) (*std::next(vList.begin(), i)) = PhysicsApply( (*std::next(vList.begin(), i)) );
-        // if (i==0) std::cout << (*std::next(vList.begin(), i)).f.x << "\n";
-    }
-}
-
-
-
-
-void SetOBJHeight(int height) {
-
-
-    int i = -1;
-    std::list<vElement>::iterator it;
-    
-    for (it = vList.begin(); it != vList.end(); it++) {
-           
-        i++;
-        (*std::next(vList.begin(), i)).y += height;
-
-        // std::cout << "(" << it->x << ",\t" << it->y << ",\t" << it->z << ") " << std::endl;
-
-    }
-}
-
-
-
-int CreateOBJ(std::string objFile){
-
-    int offsetX = -2.5;
-    int offsetY = 0;
-
-    int sizeX = 5;
-    int sizeY = 4;
-
-    int y = 0;
-    while (y != sizeY){
-        
-        int x = 0;
-        // std::cout<< "" <<std::endl;
-        while (x != sizeX){
-
-            // std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
-
-            vElement v;
-            v.x = x+offsetX;
-            v.y = -y;
-            v.z = 0;
-            vList.push_back(v);
-
-
-
-            x++;
-        }
-        y++;
-    }
-
-
-
-    y = 0;
-    while (y != sizeY-1){
-        
-        int x = 0;
-        // std::cout<< "" <<std::endl;
-        while (x != sizeX-1){
-
-            int i = (sizeX * y) + x + 1;
-            // std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
-            // std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
-            // std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
-            // std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//"       <<std::endl;
-            i-=1;
-
-            fElement f;
-            f.v1 = i;
-            f.v2 = i+1;
-            f.v3 = i+sizeX;
-            fList.push_back(f);
-            f.v1 = i+1;
-            f.v2 = i+sizeX;
-            f.v3 = i+sizeX+1;
-            fList.push_back(f);
-            f.v1 = i+sizeX;
-            f.v2 = i+sizeX+1;
-            f.v3 = i;
-            fList.push_back(f);
-            f.v1 = i+sizeX+1;
-            f.v2 = i;
-            f.v3 = i+1;
-            fList.push_back(f);
-
-            x++;
-        }
-        y++;
-    }
-
-/*
-vElement v = vList.front();
-vList.pop_front();
-output << "v " << v.x << " " << v.y << " " << v.z << std::endl;
-fElement f = fList.front();
-fList.pop_front();
-f.v1+=1;
-f.v2+=1;
-f.v3+=1;
-
-
-
-*/
-    return 0; 
-}
+bool demoMode = true;
 
 
 int main( void )
@@ -327,21 +39,20 @@ int main( void )
     glLoadIdentity( );
     
 
-    
+    // Initialize Sphere
+    sphere.x = 0;
+    sphere.y = 0;
+    sphere.z = 0;
 
     // ========== AUTO LOAD TEST ==========
 
-    // LoadOBJ("sphere4x4.obj");
+    // LoadOBJ("sphere8x8.obj");
+    // OffsetOBJ(0,5,0);
+
     // LoadOBJ("triangle_groundplane.obj");
 
-    CreateOBJ("cloth");
-    SaveOBJ("cloth.obj");
-    LoadOBJ("cloth.obj");
-
-    (*std::next(vList.begin(), 0)).fixed = true;
-    (*std::next(vList.begin(), 4)).fixed = true;
-
-    SetOBJHeight(5);
+    // CreateVerticalSheetFixed("cloth");
+    SS1("cloth");
     togglePlayClip = true;
 
     // // simulate 1 frame
@@ -376,7 +87,7 @@ int main( void )
             if (togglePlayClip) {
                 if (debug) itLimit--;
                 if (itLimit>0) {
-                    std::cout << "\n\n\n\n";
+                    if (debug) std::cout << "\n\n\n\n";
                     SimulateNextFrame();      // Function to simulate the next frame
                 }
                 // SetFrame(currentFrame+1); // KEEP AT CURRENT FRAME FOR NOW
@@ -481,26 +192,228 @@ void keyCallback( GLFWwindow *window, int key, int scancode, int action, int mod
 
 
 
-vElement LogVertexDistances(vElement v) {
 
 
-    // Creating a iterator pointing to start of set
-    std::set<int>::iterator it = v.fIndex.begin();
-    // std::cout << "> DISTANCES";
-    
-    // Iterate till the end of set
-    while (it != v.fIndex.end()) {
 
-        // log the distance between the two verticies
-        v.fDistance.push_back( VertexDistance( v, (*std::next(vList.begin(), (*it))) ) );
 
-        // std::cout << "   " << (*it) << "_" << VertexDistance( v, (*std::next(vList.begin(), (*it))) );
 
-        //Increment the iterator
-        it++;
+
+
+
+//--------------------------------//
+//                                //
+//  PHYSICS CALCULATION ROUTEINS  //
+//                                //
+//--------------------------------//
+
+// calculate particle vector if particle hits a boundary - return new vector
+vElement PhysicsBounds(vElement v) {
+
+    if (v.position.y < 0) {
+        v.position.y = 0;
+        v.force.x = -v.force.x*friction;
+        v.force.y =  v.force.y*friction;
+        v.force.z =  v.force.z*friction;
+
+        v.velocity.x = -v.velocity.x*friction;
+        v.velocity.y = v.velocity.y*friction;
+        v.velocity.z = v.velocity.z*friction;
     }
 
-    std::cout << std::endl;
+    if (sphere.enable){
+
+    }
+    
+    return v;
+}
+
+// Distance between two vertices
+float VertexDistance(vElement p1, vElement p2){
+    return sqrt(pow(p1.position.x-p2.position.x, 2)+pow(p1.position.y-p2.position.y, 2)+pow(p1.position.z-p2.position.z, 2));
+}
+
+//
+vElement Normalize(vElement v){
+
+    float length = sqrt ( pow(v.position.x,2) + pow(v.position.y,2) + pow(v.position.z,2) );
+
+    v.position.x = v.position.x / length; 
+    v.position.y = v.position.y / length; 
+    v.position.z = v.position.z / length; 
+
+    return v; 
+}
+
+//
+void PhysicsSpring(int pIndex) {
+
+    if (debug) std::cout<< "\nPhysicsSpring index: " << pIndex << "\n---------------------" << std::endl;
+
+    vElement springVector;
+
+    // Creating a iterator pointing to start of set
+    std::set<int>::iterator it = (*std::next(vList.begin(), pIndex)).fIndex.begin();
+    int i=-1;
+    while (it != (*std::next(vList.begin(), pIndex)).fIndex.end()) { // Iterate till the end of set
+        i++;
+        if (debug && i>0) std::cout << "------------------------------------------" << std::endl;
+
+
+        vElement p1 = (*std::next(vList.begin(), pIndex));
+        vElement p2 = (*std::next(vList.begin(), (*it)));
+        // if (debug) std::cout << "\tP1 - Pos         (" << (*std::next(vList.begin(), pIndex)).x << ", " << (*std::next(vList.begin(), pIndex)).y << ", " << (*std::next(vList.begin(), pIndex)).z << ")" << std::endl;
+        // if (debug) std::cout << "\tP2 - Pos         (" << (*std::next(vList.begin(), (*it))).x << ", " << (*std::next(vList.begin(), (*it))).y << ", " << (*std::next(vList.begin(), (*it))).z << ")" << std::endl;
+
+        // X(current) is just the current length of the spring, and X(rest), the spring's rest length, needs to be stored in each spring structure. 
+        springVector.position.x = p1.position.x - p2.position.x;
+        springVector.position.y = p1.position.y - p2.position.y;
+        springVector.position.z = p1.position.z - p2.position.z;
+
+        float xCurrent  = VertexDistance(p1, p2);
+        float xRest     = (*std::next(p1.fDistance.begin(), i));
+        float distanceFromRest = xCurrent-xRest;
+        // if (debug) std::cout << "\tdistanceFromRest: " << distanceFromRest << std::endl;
+
+
+        float hookesValue = -k * distanceFromRest;
+        // if (debug) std::cout << "\thookesValue:      " << hookesValue << std::endl;
+
+
+        springVector = Normalize(springVector);
+        // if (debug) std::cout << "\tspringVector     (" << springVector.x << ", " << springVector.y << ", " << springVector.z << ")" << std::endl;
+
+        // calculate force
+        springVector.force.x = ( springVector.position.x * hookesValue );
+        springVector.force.y = ( springVector.position.y * hookesValue );
+        springVector.force.z = ( springVector.position.z * hookesValue );
+        // if (debug) std::cout << "\tforce            (" << force.x << ", " << force.y << ", " << force.z << ")" << std::endl;
+
+        // if (debug) std::cout << "\tP1 - PreForce    (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+        p1.force.x = ( p1.force.x + springVector.force.x);
+        p1.force.y = ( p1.force.y + springVector.force.y);
+        p1.force.z = ( p1.force.z + springVector.force.z);
+        // if (debug) std::cout << "\tP1 - PostForce   (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+        (*std::next(vList.begin(), pIndex)).force = p1.force;
+        // if (debug) std::cout << "\tP1 - STOREDForce ("  << (*std::next(vList.begin(), pIndex)).force.x << ", " 
+        //                                                 << (*std::next(vList.begin(), pIndex)).force.y << ", " 
+        //                                                 << (*std::next(vList.begin(), pIndex)).force.z << ")" << std::endl;
+
+        // p2.force.x = ( p2.force.x - springVector.force.x);
+        // p2.force.y = ( p2.force.y - springVector.force.y);
+        // p2.force.z = ( p2.force.z - springVector.force.z);
+        (*std::next(vList.begin(), (*it))).force  = p2.force;
+
+
+        it++; //Increment the iterator
+    }
+
+    if (debug) std::cout<< "\n";
+
+}
+
+//
+vElement PhysicsApply(vElement p1) 
+{
+
+    if (!p1.fixed){
+        if (debug) std::cout << "\tGravity         (" << gravity.x << ", " << gravity.y << ", " << gravity.z << ")" << std::endl;
+
+        // if(!particles[i].isStationary()) {
+        if(enableGravity) {
+            p1.force.x = (p1.force.x + gravity.x * p1.mass);
+            p1.force.y = (p1.force.y + gravity.y * p1.mass);
+            p1.force.z = (p1.force.z + gravity.z * p1.mass);
+        }
+
+        if(enableWind) {
+            if (enableWindRealism) {
+                srand((unsigned) time(0));
+                float windRand;
+                windRand = (float)(rand() % 10 + 1);
+                p1.force.x += wind.x - (wind.x * windRand * 0.01 + (p1.position.x * .004));
+                p1.force.y += wind.y - (wind.y * windRand * 0.01 + (p1.position.y * .004));
+                p1.force.z += wind.z - (wind.z * windRand * 0.01 + (p1.position.z * .004));
+            }else{
+                p1.force.x += wind.x;
+                p1.force.y += wind.y;
+                p1.force.z += wind.z;
+            }
+        }
+
+        // if (debug) std::cout << "\tP1 - Force+Grav (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+
+        // particles[i].setVelocity(particles[i].getVelocity() + (particles[i].getForce() / (particles[i].getMass() * timeStep)));
+        p1.velocity.x = p1.velocity.x + ( p1.force.x / (p1.mass*timeStep) );
+        p1.velocity.y = p1.velocity.y + ( p1.force.y / (p1.mass*timeStep) );
+        p1.velocity.z = p1.velocity.z + ( p1.force.z / (p1.mass*timeStep) );
+
+        // particles[i].setVelocity(particles[i].getVelocity() * damp);
+        p1.velocity.x = p1.velocity.x * damp;
+        p1.velocity.y = p1.velocity.y * damp;
+        p1.velocity.z = p1.velocity.z * damp;
+
+
+        p1 = PhysicsBounds(p1);
+        // particles[i].setPosition(particles[i].getPosition() + (particles[i].getVelocity() * timeStep));
+        p1.position.x = p1.position.x + (p1.velocity.x * timeStep);
+        p1.position.y = p1.position.y + (p1.velocity.y * timeStep);
+        p1.position.z = p1.position.z + (p1.velocity.z * timeStep);
+
+        // particles[i].setForce(Vector(0.0f, 0.0f, 0.0f));
+        p1.force.x = 0;
+        p1.force.y = 0;
+        p1.force.z = 0;        
+
+    }
+
+    return p1;
+}
+
+//
+void SimulateNextFrame() 
+{
+
+    int i;
+
+    std::list<vElement>::iterator it;
+    i = -1;
+    for (it = vList.begin(); it != vList.end(); it++) {
+        i++;
+
+        PhysicsSpring( i );
+    }
+
+
+    i = -1;
+    for (it = vList.begin(); it != vList.end(); it++) {
+        i++;
+        
+        if (debug) std::cout<< "\nPhysicsApply index: " << i << "\n---------------------" << std::endl;
+        if (debug && i>0) std::cout << "------------------------------------------" << std::endl;
+
+        (*std::next(vList.begin(), i)) = PhysicsApply( (*std::next(vList.begin(), i)) );
+        if (debug) std::cout << " \n";
+    }
+}
+
+// Find and store the initial distance between every point 
+vElement LogVertexDistances(vElement v) 
+{
+
+    if (debug) std::cout << "> DISTANCES";
+  
+    std::set<int>::iterator it = v.fIndex.begin();  // Creating a iterator pointing to start of set
+    while (it != v.fIndex.end()) {                  // Iterate till the end of set
+
+        // log the distance between the two vertices
+        v.fDistance.push_back( VertexDistance( v, (*std::next(vList.begin(), (*it))) ) );
+        
+        if (debug) std::cout << "   " << (*it) << "_" << VertexDistance( v, (*std::next(vList.begin(), (*it))) );
+
+        it++;                                       //Increment the iterator
+    }
+
+    if (debug) std::cout << std::endl;
     return v;
 }
 
@@ -544,7 +457,7 @@ void GenerateLinkList(){
 }
 
 
-
+// Draws a line between two vertices 
 void DrawLine(float x1, float y1, float z1, float x2, float y2, float z2, GLfloat edgeLength )
 {
     // GLfloat halfSideLength = edgeLength * 0.5f;
@@ -632,6 +545,17 @@ void DrawCube( GLfloat centerPosX, GLfloat centerPosY, GLfloat centerPosZ, GLflo
 
 
 
+
+
+
+
+//----------------------------//
+//                            //
+//  FILE MANAGEMENT ROUTEINS  //
+//                            //
+//----------------------------//
+
+// clears the current lists before re-loading
 void Clear()
 {
     // Reset variables to defaults before loading new obj
@@ -642,8 +566,15 @@ void Clear()
 
 }
 
+// loads an object to the scene
+int LoadOBJ(std::string file)
+{
 
-int LoadOBJ(std::string file) {
+    /* REQUIRES MODIFICATION TO ALLOW FOR 2 SEPERATE OBJECTS TO BE LOADED AT ONCE
+        OBJ 1 = Cloth or Misc object
+        OBJ 2 = Table or Sphere
+    */
+    
     Clear();
 
     ifstream inputFile(file.c_str(), ios::in);
@@ -676,7 +607,7 @@ int LoadOBJ(std::string file) {
         case 'v': // new vertex of some type
 
             // fill the values with the data in the line
-            sscanf(line, "%s %f %f %f", dummy, &(v.x), &(v.y), &(v.z));
+            sscanf(line, "%s %f %f %f", dummy, &(v.position.x), &(v.position.y), &(v.position.z));
 
             switch (line[1]) { // switch on second char to determine which kind
 
@@ -742,9 +673,9 @@ int LoadOBJ(std::string file) {
     return 0;
 }
 
-
-
-int SaveOBJ(std::string objFile) {
+// save the current frame to an object file. 
+int SaveOBJ(std::string objFile)
+{
     
     ofstream output(objFile);
     if (!output.is_open())
@@ -756,21 +687,21 @@ int SaveOBJ(std::string objFile) {
     {
         vElement v = vList.front();
         vList.pop_front();
-        output << "v " << v.x << " " << v.y << " " << v.z << std::endl;
+        output << "v " << v.position.x << " " << v.position.y << " " << v.position.z << std::endl;
     }
 
     while (vnList.size()>0)
     {
         vElement v = vnList.front();
         vnList.pop_front();
-        output << "vn " << v.x << " " << v.y << " " << v.z << std::endl;
+        output << "vn " << v.position.x << " " << v.position.y << " " << v.position.z << std::endl;
     }
 
     while (vtList.size()>0)
     {
         vElement v = vtList.front();
         vtList.pop_front();
-        output << "vt " << v.x << " " << v.y << " " << v.z << std::endl;
+        output << "vt " << v.position.x << " " << v.position.y << " " << v.position.z << std::endl;
     }
 
     while (fList.size()>0)
@@ -780,7 +711,9 @@ int SaveOBJ(std::string objFile) {
         f.v1+=1;
         f.v2+=1;
         f.v3+=1;
-        output << "f " << f.v1 << "/" << f.vt1 << "/" << f.vn1 << " " << f.v2 << "/" << f.vt2 << "/" << f.vn2 << " " << f.v3 << "/" << f.vt3 << "/" << f.vn3 << std::endl;
+        output << "f "  << f.v1 << "/" << f.vt1 << "/" << f.vn1 << " " 
+                        << f.v2 << "/" << f.vt2 << "/" << f.vn2 << " " 
+                        << f.v3 << "/" << f.vt3 << "/" << f.vn3 << std::endl;
     }
 
     output.close();
@@ -791,7 +724,304 @@ int SaveOBJ(std::string objFile) {
     return 0; 
 }
 
+// Set the initial offset of the object in the scene
+void OffsetOBJ(float x, float y, float z) {
 
+    int i = -1;
+    std::list<vElement>::iterator it;
+    
+    for (it = vList.begin(); it != vList.end(); it++) {
+           
+        i++;
+        (*std::next(vList.begin(), i)).position.x += x;
+        (*std::next(vList.begin(), i)).position.y += y;
+        (*std::next(vList.begin(), i)).position.z += z;
+
+        // std::cout << "(" << it->x << ",\t" << it->y << ",\t" << it->z << ") " << std::endl;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+//--------------------------------//
+//                                //
+//  SIMULATION CREATION ROUTEINS  //
+//                                //
+//--------------------------------//
+
+void CreateVerticalSheet(std::string objFile, int sizeX, int sizeY)
+{
+    Clear();
+
+    int offsetX = -2.5;
+    int offsetY = 0;
+
+    // int sizeX = 5;
+    // int sizeY = 4;
+
+    int y = 0;
+    while (y != sizeY){
+        
+        int x = 0;
+        // std::cout<< "" <<std::endl;
+        while (x != sizeX){
+
+            // std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
+
+            vElement v;
+            v.position.x = x+offsetX;
+            v.position.y = -y;
+            v.position.z = 0;
+            vList.push_back(v);
+
+
+
+            x++;
+        }
+        y++;
+    }
+
+
+
+    y = 0;
+    while (y != sizeY-1){
+        
+        int x = 0;
+        // std::cout<< "" <<std::endl;
+        while (x != sizeX-1){
+
+            int i = (sizeX * y) + x + 1;
+            // std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
+            // std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
+            // std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
+            // std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//"       <<std::endl;
+            i-=1;
+
+            fElement f;
+            f.v1 = i;
+            f.v2 = i+1;
+            f.v3 = i+sizeX;
+            fList.push_back(f);
+            f.v1 = i+1;
+            f.v2 = i+sizeX;
+            f.v3 = i+sizeX+1;
+            fList.push_back(f);
+            f.v1 = i+sizeX;
+            f.v2 = i+sizeX+1;
+            f.v3 = i;
+            fList.push_back(f);
+            f.v1 = i+sizeX+1;
+            f.v2 = i;
+            f.v3 = i+1;
+            fList.push_back(f);
+
+            x++;
+        }
+        y++;
+    }
+
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+
+    OffsetOBJ(0,5,0);
+    (*std::next(vList.begin(), 0)).fixed = true;
+    (*std::next(vList.begin(), 4)).fixed = true;
+
+}
+
+
+void SS1(std::string objFile)
+{
+    /*  
+        Simulation Scenario 1 (SS1): a square piece of cloth floating horizontally in the air at first, which
+        then free-falls onto a sphere on the ground.
+    */
+
+    CreateHorizontalSheet(objFile, 10, 10);
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+    FixClothSides(10,10);
+
+
+    OffsetOBJ(0,5,-1.5);
+}
+
+void SS2(std::string objFile)
+{
+    /*
+        Simulation Scenario 2 (SS2): a square piece of cloth floating horizontally in the air first, then
+        free-falling with two adjacent corners fixed in the space.
+    */
+}
+
+void SS1R(std::string objFile)
+{
+    /*
+        Simulation Scenario 1 (SS1): a square piece of cloth floating horizontally in the air at first, which
+        then free-falls onto a sphere on the ground.
+
+        SS1 with the sphere rotating in-place round the Y axis (up-axis) and friction between the sphere
+        and the cloth.
+    */
+}
+
+void SS2W(std::string objFile)
+{
+    /*
+        Simulation Scenario 2 (SS2): a square piece of cloth floating horizontally in the air first, then
+        free-falling with two adjacent corners fixed in the space.
+        
+        SS2 with wind blowing.
+    */
+}
+
+
+void FixClothSides(int sizeX, int sizeY)
+{
+    int y = 0;
+    int x = 0;
+
+
+    // k = 100; // srping constant
+    // gravity.y *=2;
+
+    while (x != sizeX){
+        (*std::next(vList.begin(), x)).fixed = true;
+        // (*std::next(vList.begin(), x*sizeX)).fixed = true;
+        // (*std::next(vList.begin(), (x*sizeX)+sizeX-1)).fixed = true;
+        // (*std::next(vList.begin(), x+(sizeX*sizeY)-sizeX)).fixed = true;
+
+        x++;
+    }
+    // (*std::next(vList.begin(), (int)(sizeX*sizeY*.5))).fixed = true;
+}
+/*
+// SS2
+void SS2(std::string objFile)
+{
+
+    CreateHorizontalSheet(objFile);
+
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+
+    OffsetOBJ(0,5,-1.5);
+    (*std::next(vList.begin(), 0)).fixed = true;
+    (*std::next(vList.begin(), sizeY-1)).fixed = true;
+    (*std::next(vList.begin(), 90)).fixed = true;
+    (*std::next(vList.begin(), 99)).fixed = true;
+    (*std::next(vList.begin(), 79)).fixed = true;
+    (*std::next(vList.begin(), 59)).fixed = true;
+    (*std::next(vList.begin(), 39)).fixed = true;
+}*/
+
+void CreateHorizontalSheet(std::string objFile, int sizeX, int sizeY)
+{
+    Clear();
+
+    /* ---------- SIM SETTINGS ---------- */
+    // These optimal sim settings for the demo environment
+    // if (demoMode)
+    // {
+    //     friction     = 0.00005;
+    //     enableGravity = true;
+    //     damp         = 0.001;
+    //     timeStep     = 0.01;
+    //     k = 40;      // srping constant
+    //     gravity.y *= 1;
+    // }
+
+
+    /* ---------- CREATE CLOTH ---------- */
+    int offsetX = -2.5;
+    int offsetY = 0;
+
+    float scale = 0.5;
+
+    int y = 0;
+    while (y != sizeY){
+        
+        int x = 0;
+        // std::cout<< "" <<std::endl;
+        while (x != sizeX){
+
+            // std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
+
+            vElement v;
+            v.position.x = (x+offsetX)*scale;
+            v.position.y = 0;
+            v.position.z = (y)*scale;
+            vList.push_back(v);
+
+
+
+            x++;
+        }
+        y++;
+    }
+
+
+
+    y = 0;
+    while (y != sizeY-1){
+        
+        int x = 0;
+        // std::cout<< "" <<std::endl;
+        while (x != sizeX-1){
+
+            int i = (sizeX * y) + x + 1;
+            // std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
+            // std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
+            // std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
+            // std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//" <<std::endl;
+            i-=1;
+
+            fElement f;
+            f.v1 = i;
+            f.v2 = i+1;
+            f.v3 = i+sizeX;
+            fList.push_back(f);
+            f.v1 = i+1;
+            f.v2 = i+sizeX;
+            f.v3 = i+sizeX+1;
+            fList.push_back(f);
+            f.v1 = i+sizeX;
+            f.v2 = i+sizeX+1;
+            f.v3 = i;
+            fList.push_back(f);
+            f.v1 = i+sizeX+1;
+            f.v2 = i;
+            f.v3 = i+1;
+            fList.push_back(f);
+
+            x++;
+        }
+        y++;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+//--------------------------------//
+//                                //
+//  MATRIX MANIPULATION ROUTEINS  //
+//                                //
+//--------------------------------//
 
 // Multiply 2 matrices together and return the result
 std::vector<float> MultMatrix (std::vector<float> m0, std::vector<float> m1)
@@ -824,10 +1054,18 @@ std::vector<float> MultMatrix (std::vector<float> m0, std::vector<float> m1)
 
     M = 
     {
-        (m0[0]*m1[0] + m0[1]*m1[4] + m0[2]*m1[8] + m0[3]*m1[12]), (m0[0]*m1[1] + m0[1]*m1[5] + m0[2]*m1[9] + m0[3]*m1[13]), (m0[0]*m1[2] + m0[1]*m1[6] + m0[2]*m1[10] + m0[3]*m1[14]), (m0[0]*m1[3] + m0[1]*m1[7] + m0[2]*m1[11] + m0[3]*m1[15]), 
-        (m0[4]*m1[0] + m0[5]*m1[4] + m0[6]*m1[8] + m0[7]*m1[12]), (m0[4]*m1[1] + m0[5]*m1[5] + m0[6]*m1[9] + m0[7]*m1[13]), (m0[4]*m1[2] + m0[5]*m1[6] + m0[6]*m1[10] + m0[7]*m1[14]), (m0[4]*m1[3] + m0[5]*m1[7] + m0[6]*m1[11] + m0[7]*m1[15]), 
-        (m0[8]*m1[0] + m0[9]*m1[4] + m0[10]*m1[8]+ m0[11]*m1[12]),(m0[8]*m1[1] + m0[9]*m1[5] + m0[10]*m1[9]+ m0[11]*m1[13]),(m0[8]*m1[2] + m0[9]*m1[6] + m0[10]*m1[10]+ m0[11]*m1[14]),(m0[8]*m1[3] + m0[9]*m1[7] + m0[10]*m1[11]+ m0[11]*m1[15]), 
-        (m0[12]*m1[0]+ m0[13]*m1[4]+ m0[14]*m1[8]+ m0[15]*m1[12]),(m0[12]*m1[1]+ m0[13]*m1[5]+ m0[14]*m1[9]+ m0[15]*m1[13]),(m0[12]*m1[2]+ m0[13]*m1[6]+ m0[14]*m1[10]+ m0[15]*m1[14]),(m0[12]*m1[3]+ m0[13]*m1[7]+ m0[14]*m1[11]+ m0[15]*m1[15]) 
+        (m0[0]*m1[0] + m0[1]*m1[4] + m0[2]*m1[8] + m0[3]*m1[12]), (m0[0]*m1[1] + m0[1]*m1[5] + m0[2]*m1[9] + m0[3]*m1[13]), 
+                        (m0[0]*m1[2] + m0[1]*m1[6] + m0[2]*m1[10] + m0[3]*m1[14]), 
+                        (m0[0]*m1[3] + m0[1]*m1[7] + m0[2]*m1[11] + m0[3]*m1[15]), 
+        (m0[4]*m1[0] + m0[5]*m1[4] + m0[6]*m1[8] + m0[7]*m1[12]), (m0[4]*m1[1] + m0[5]*m1[5] + m0[6]*m1[9] + m0[7]*m1[13]), 
+                        (m0[4]*m1[2] + m0[5]*m1[6] + m0[6]*m1[10] + m0[7]*m1[14]), 
+                        (m0[4]*m1[3] + m0[5]*m1[7] + m0[6]*m1[11] + m0[7]*m1[15]), 
+        (m0[8]*m1[0] + m0[9]*m1[4] + m0[10]*m1[8]+ m0[11]*m1[12]), (m0[8]*m1[1] + m0[9]*m1[5] + m0[10]*m1[9]+ m0[11]*m1[13]),
+                        (m0[8]*m1[2] + m0[9]*m1[6] + m0[10]*m1[10]+ m0[11]*m1[14]),
+                        (m0[8]*m1[3] + m0[9]*m1[7] + m0[10]*m1[11]+ m0[11]*m1[15]), 
+        (m0[12]*m1[0]+ m0[13]*m1[4]+ m0[14]*m1[8]+ m0[15]*m1[12]), (m0[12]*m1[1]+ m0[13]*m1[5]+ m0[14]*m1[9]+ m0[15]*m1[13]),
+                        (m0[12]*m1[2]+ m0[13]*m1[6]+ m0[14]*m1[10]+ m0[15]*m1[14]),
+                        (m0[12]*m1[3]+ m0[13]*m1[7]+ m0[14]*m1[11]+ m0[15]*m1[15]) 
     };
 
     return M;
@@ -837,6 +1075,19 @@ std::vector<float> MultMatrix (std::vector<float> m0, std::vector<float> m1)
 
 
 
+
+
+
+
+
+
+//--------------------//
+//                    //
+//  DISPLAY ROUTEINS  //
+//                    //
+//--------------------//
+
+// Draws the mesh lists to the scene
 void DrawMesh()
 {
 
@@ -850,9 +1101,9 @@ void DrawMesh()
 
 
         // Scale Up - Add Offset
-        xyz[0] = (v.x*scale)+halfScreenWidth;
-        xyz[1] = (v.y*scale)+halfScreenHeight;
-        xyz[2] = (v.z*scale)+-500;
+        xyz[0] = (v.position.x*scale)+halfScreenWidth;
+        xyz[1] = (v.position.y*scale)+halfScreenHeight;
+        xyz[2] = (v.position.z*scale)+-500;
         
         cubeColour = 
             {
@@ -884,27 +1135,27 @@ void DrawMesh()
         vElement v3 = *std::next(vList.begin(), f.v3);
 
         // Scale Up - Add Offset
-        v1.x = (v1.x*scale)+halfScreenWidth;
-        v1.y = (v1.y*scale)+halfScreenHeight;
-        v1.z = (v1.z*scale)+-500;
+        v1.position.x = (v1.position.x*scale)+halfScreenWidth;
+        v1.position.y = (v1.position.y*scale)+halfScreenHeight;
+        v1.position.z = (v1.position.z*scale)+-500;
 
-        v2.x = (v2.x*scale)+halfScreenWidth;
-        v2.y = (v2.y*scale)+halfScreenHeight;
-        v2.z = (v2.z*scale)+-500;
+        v2.position.x = (v2.position.x*scale)+halfScreenWidth;
+        v2.position.y = (v2.position.y*scale)+halfScreenHeight;
+        v2.position.z = (v2.position.z*scale)+-500;
 
-        v3.x = (v3.x*scale)+halfScreenWidth;
-        v3.y = (v3.y*scale)+halfScreenHeight;
-        v3.z = (v3.z*scale)+-500;       
+        v3.position.x = (v3.position.x*scale)+halfScreenWidth;
+        v3.position.y = (v3.position.y*scale)+halfScreenHeight;
+        v3.position.z = (v3.position.z*scale)+-500;       
 
-        DrawLine(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, 50);
-        DrawLine(v3.x, v3.y, v3.z, v2.x, v2.y, v2.z, 50);
-        DrawLine(v3.x, v3.y, v3.z, v1.x, v1.y, v1.z, 50);
+        DrawLine(v1.position.x, v1.position.y, v1.position.z, v2.position.x, v2.position.y, v2.position.z, 50);
+        DrawLine(v3.position.x, v3.position.y, v3.position.z, v2.position.x, v2.position.y, v2.position.z, 50);
+        DrawLine(v3.position.x, v3.position.y, v3.position.z, v1.position.x, v1.position.y, v1.position.z, 50);
 
     }
 }
 
 
-
+// Draws the axis to the scene 
 void PlaceAxis()
 {
     // ----- ORIGIN -----

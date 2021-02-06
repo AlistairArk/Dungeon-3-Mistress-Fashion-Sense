@@ -44,18 +44,15 @@ GLfloat rotationY = -45.0f;
 // Screen constants
 GLfloat halfScreenWidth = SCREEN_WIDTH / 2;
 GLfloat halfScreenHeight = SCREEN_HEIGHT / 2;
-int scale = 100;                         // Factor to scale the OBJ model up by
+int scale = 100;                        // Factor to scale the OBJ model up by
 int scalePosFactor = .25;
 int scalePos = scale*scalePosFactor;    // Factor to scale movements in the OBJ by
 
 float sceneX = 0;
 float sceneY = 0;
 float sceneZ = 0;
-bool autoIK = true;
 
-
-// When a new model is loaded or a change in the heirarchy is made
-// this switch will flip to ensue that the entire heirarchy is updated.  
+// When a new model is loaded or a change in the heirarchy is made this switch will flip to ensue that the entire heirarchy is updated.  
 bool loadSwitch = false;
 
 // Vertex Color
@@ -71,8 +68,8 @@ std::vector<float> cubeColour
 };
 
 
-int currentFrame=0;             // Stores current frame index
-int lastFrame=-1;               // Set forceFullRefresh to true to refresh the entire hierarchy despite the frame staying the same
+int currentFrame=0; // Stores current frame index
+int lastFrame=-1;   // Set forceFullRefresh to true to refresh the entire hierarchy despite the frame staying the same
 
 std::vector<float> rootPos = {0,0,0};
 
@@ -88,26 +85,19 @@ int LoadOBJ(std::string objFile);
 int SaveOBJ(std::string objFile);
 void Clear();
 int CreateOBJ(std::string objFile);
+void OffsetOBJ(float x, float y, float z);
 
-struct velocity {
-    float x = 0;
-    float y = 0;
-    float z = 0;
-};
-
-struct force {
+struct vec3 {
     float x = 0;
     float y = 0;
     float z = 0;
 };
 
 struct vElement {
-    float x = 0;
-    float y = 0;
-    float z = 0;
+    vec3 position;
 
-    velocity v; // velocity
-    velocity f; // force
+    vec3 velocity; // velocity
+    vec3 force; // force
     float mass = 1;
 
     bool fixed = false;
@@ -132,7 +122,6 @@ struct fElement{
 
 std::list<fElement> fList;
 std::list<vElement> vList;
-std::list<vElement> vListCopy;
 std::list<vElement> vnList;
 std::list<vElement> vtList;
 
@@ -146,23 +135,43 @@ std::string fFilename = "Untitled_Mesh"; // Mesh Name
 
 
 
-/* ---------- PHYSICS SIMULATION ---------- */
+
+
+/* ---------- SIMULATION SCENES ---------- */
+void CreateVerticalSheet(std::string objFile, int x, int y);
+void CreateHorizontalSheet(std::string objFile, int x, int y);
+
+void SS1(std::string objFile);
+void SS2(std::string objFile);
+void SS1R(std::string objFile);
+void SS2W(std::string objFile);
+
+void FixClothSides(int sizeX, int sizeY);
+
+
+
+
+/* ---------- PHYSICS CALCULATION ---------- */
 
 void SimulateNextFrame();
-vElement PhysicsPoint(vElement v);
 void PhysicsSpring(int pInde);
+vElement PhysicsPoint(vElement v);
 vElement PhysicsApply(vElement v);
 vElement PhysicsBounds(vElement v);
 vElement LogVertexDistances(vElement v);
 
-float friction     = 0.2;
-bool enableGravity = true;
-float damp         = 0.00099;
-float timeStep     = 0.0001f;
+float friction      = 0.00005;
+bool enableGravity  = true;
+bool enableWind     = false; 
+bool enableWindRealism = false; 
+// bool enableSphere   = false; 
+float damp          = 0.001;
+float timeStep      = 0.01;
+// bool phySphere      = true; 
+
 
 // k is a very important constant; if too low, the cloth will sag unrealistically:
-float k = 50; // srping constant
-
+float k = 40; // srping constant
 
 struct Gravity {
     float x = 0;
@@ -170,10 +179,31 @@ struct Gravity {
     float z = 0;
 };
 
+struct Wind {
+    float x = -10;
+    float y = 0;
+    float z = -15;
+};
+
 Gravity gravity;
+Wind wind;
 
+// Sphere constants
+struct Sphere {
+    vec3 pos;
+    bool rotate = false;
+    bool enable = true;
+    float radius = 5;
+};
+Sphere sphere;
 
-// float springTension = 0.05;
-// float springStrength = 0.0001;
-// float gravity = -0.000981;
-// float gravity = -0.000981 *.5;
+    // These optimal sim settings for the demo environment
+    // if (demoMode)
+    // {
+    //     friction     = 0.00005;
+    //     enableGravity = true;
+    //     damp         = 0.001;
+    //     timeStep     = 0.01;
+    //     k = 40;      // srping constant
+    //     gravity.y *= 1;
+    // }
