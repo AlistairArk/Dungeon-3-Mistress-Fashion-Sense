@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <cstdlib>
 
+
 #include <math.h>
 #include <stdio.h>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include <algorithm>
 #include <string>
 #include <map>
+#include <random>
 
 using namespace std;
 
@@ -34,8 +36,8 @@ void DrawLine(float x1, float y1, float z1, float x2, float y2, float z2, GLfloa
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 1280
 const double PI = 3.141592653589793238463;    //value of pi
-
 std::vector<float> HierarchicalOffset(int jIndex);
+
 
 // Initial camera rotation
 GLfloat rotationX = 20.0f;
@@ -44,9 +46,7 @@ GLfloat rotationY = -45.0f;
 // Screen constants
 GLfloat halfScreenWidth = SCREEN_WIDTH / 2;
 GLfloat halfScreenHeight = SCREEN_HEIGHT / 2;
-int scale = 100;                        // Factor to scale the OBJ model up by
-int scalePosFactor = .25;
-int scalePos = scale * scalePosFactor;    // Factor to scale movements in the OBJ by
+int scale = 100;                            // Factor to scale the OBJ model up by
 
 float sceneX = 0;
 float sceneY = 0;
@@ -54,9 +54,9 @@ float sceneZ = 0;
 
 // When a new model is loaded or a change in the heirarchy is made this switch will flip to ensue that the entire heirarchy is updated.  
 bool loadSwitch = false;
+bool enableAxis = true;
 
 // Vertex Color
-
 std::vector<float> lineColour
 {
     0, 255, 0,
@@ -98,7 +98,7 @@ struct vElement {
 
     vec3 velocity; // velocity
     vec3 force; // force
-    float mass = .5;
+    float mass = .25;
 
     bool fixed = false;
     std::set<int> fIndex;       // index of all connecting faces to this point
@@ -138,39 +138,38 @@ std::string fFilename = "Untitled_Mesh"; // Mesh Name
 
 
 /* ---------- SIMULATION SCENES ---------- */
-void CreateVerticalSheet(std::string objFile, int x, int y);
+
+// Creates a horizontal piece of cloth
 void CreateHorizontalSheet(std::string objFile, int x, int y);
 
-void SS1(std::string objFile);
-void SS2(std::string objFile);
-void SS1R(std::string objFile);
-void SS2W(std::string objFile);
+void SS1(std::string objFile);  // SS1 (cloth falls onto a sphere)
+void SS2(std::string objFile);  // SS2 (cloth with fixed corners)
+void SS1R(std::string objFile); // SS1 /w rotation
+void SS2W(std::string objFile); // SS2 /w wind
 
-void FixClothSides(int sizeX, int sizeY);
+void SimFixCorners(std::string objFile);
+void SimFixSides(std::string objFile, int sides);
 
 
 
 
 /* ---------- PHYSICS CALCULATION ---------- */
 
-void SimulateNextFrame();
+void SimulateNextFrame();           // Simulates physics for the next frame
 void PhysicsSpring(int pInde);
-vElement PhysicsPoint(vElement v);
-vElement PhysicsApply(vElement v);
-vElement PhysicsBounds(vElement v);
-vec3 LogVertexDistances(vec3 v);
-float VertexDistance(vec3 p1, vec3 p2);
-vec3 Normalize(vec3 v);
+vElement PhysicsPoint(vElement v);  // Calculates physical forces for a single vertex
+vElement PhysicsApply(vElement v);  // Applies physical forces to each vertex
 
-float friction = 0.005;
-bool enableGravity = true;
-bool enableWind = false;
-bool enableWindRealism = false;
-// bool enableSphere   = false; 
+vElement PhysicsBounds(vElement v); // calculate particle vector if particle hits a boundary - return new vector
+vec3 LogVertexDistances(vec3 v);    // Find and store the initial distance between every point 
+float VertexDistance(vec3 p1, vec3 p2); // Distance between two vertices in 3D space
+vec3 Normalize(vec3 v);             // Normalizes a vector
+
 float damp = 0.001;
 float timeStep = 0.001;
-// bool phySphere      = true; 
-
+float groundHeight = -0.5;
+int clothH = 11;
+int clothW = 11;
 
 // k is a very important constant; if too low, the cloth will sag unrealistically:
 float k = 40; // srping constant
@@ -179,28 +178,59 @@ struct Gravity {
     float x = 0;
     float y = -9.81;
     float z = 0;
+    
+    bool enable  = true;
 };
 
 struct Wind {
     float x = -10;
     float y = 0;
     float z = -15;
+
+    bool enable  = false;   
+    bool realism = false;   // randomizes wind force on vertices to simulate more realistic wind
+};
+
+struct Ground {
+    float x = 0;
+    float y = -1;
+    float z = 0;
+
+    float friction = 0.005;
+    bool enable  = true;
 };
 
 Gravity gravity;
+Ground ground;
 Wind wind;
 
 // Sphere constants
 struct Sphere {
-    vec3 position;
+    vec3 position;      // position of the sphere
+    vec3 rotation;      // speed at which the sphere rotates
     bool rotate = true;
     bool enable = true;
     float radius = 2;
-    vec3 rotation;
+
+    // Initializers
+    float posX = 0;     // position
+    float posY = 0;
+    float posZ = 0;
+    
+    float rotX = 0;     // rotation
+    float rotY = 20;  // (0.02 - 0.04 for "sane" speeds)
+    float rotZ = 0; 
+
+    // Divide the ball horizontally and vertically into a 50*50 grid
+    const int ySeg = 10;
+    const int xSeg = 10;
 };
 Sphere sphere;
 
+// Sphere rotation matrix
+vector<float> mY = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};
 
+// Stores a list of faces on the sphere
 struct SphereVertices {
     vec3 position;
     int i1;
@@ -211,23 +241,6 @@ struct SphereVertices {
     int i6;
 };
 std::list<SphereVertices> sphereVertices;
-
-// These optimal sim settings for the demo environment
-// if (demoMode)
-// {
-//     friction     = 0.00005;
-//     enableGravity = true;
-//     damp         = 0.001;
-//     timeStep     = 0.01;
-//     k = 40;      // srping constant
-//     gravity.y *= 1;
-// }#pragma once
-
-
-// Divide the ball horizontally and vertically into a 50*50 grid
-const int Y_SEGMENTS = 10;
-const int X_SEGMENTS = 10;
-
 
 
 

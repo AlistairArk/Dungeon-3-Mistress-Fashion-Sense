@@ -7,10 +7,53 @@ Commands are invoked by having the program window selected and pressing one of t
 Prompts and inputs will show up in the console window.
 
 Key Command List:
-    S - Save the current mesh as a .obj file
+    S - Save the cloth mesh to a .obj file (Utilizes the mesh state in the current frame)
     L - Load a .obj file from the current working directory
 
     UP_ARROW,DOWN_ARROW,LEFT_ARROW,RIGHT_ARROW  - Rotate the scene view
 
+
+    Simulations:
+        0 - Empty Sim Environment
+        1 - Simulation Scenario 1 (SS1): a square piece of cloth floating horizontally in the air at first, 
+            which then free-falls onto a sphere on the ground.
+        2 - Simulation Scenario 2 (SS2): a square piece of cloth floating horizontally in the air first, then
+            free-falling with two adjacent corners fixed in the space.
+        3 - SS1 with the sphere rotating in-place round the Y axis (up-axis) and friction between the sphere
+            and the cloth.
+        4 - SS2 with wind blowing.
+
+        5 - A square piece of cloth floating horizontally in the air first, then free-falling with
+            four corners fixed in the space.
+        6 7 8 9 - A square piece of cloth floating horizontally in the air first, then free-falling with
+                  all edges of a side fixed in the space. (6: 1 Side, 7: 2 Sides, 8: 3 Sides, 9: 4 Sides)
+
+    Alter Environment:
+        P - Pause/Play the current simulation.
+        
+        A - Toggle axis.
+
+        W - Toggle wind         (modelled as a steady force in a fixed direction).
+        R - Toggle wind realism (introduces some variation to the wind strength on the cloth mesh).
+
+        G - Toggle ground.
+
+        C - Toggle sphere.
+        X - Toggle sphere rotation.
+        < > - Slow down / Speed up sphere.
+        [ ] - Slow down / Speed up simulation.
+
+        + - - Increase/Decrease cloth length
+        / * - Increase/Decrease cloth width
+
+
+
+
+
+=== INTERFACE ===
+When running the program, a small grid should be visible, with an axis at the center.
+Use the key commands to run defined simulations or load objects into the scene.
+
+Wind - A pink line drawn form the origin is used to indicate the strength 
 
 Note, when saving and loading files, you are not required to enter the .obj file extension.

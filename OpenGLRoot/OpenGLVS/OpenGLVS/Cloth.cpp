@@ -10,7 +10,6 @@ int main(void)
 
 
     // ========== WINDOW INITIALIZATION ==========
-
     if (!glfwInit())
     {
         return -1;
@@ -39,65 +38,47 @@ int main(void)
     glLoadIdentity();
 
 
-    // Initialize Sphere
-    sphere.position.x = 0;
-    sphere.position.y = 0;
-    sphere.position.z = 0;
+    // ========== PARAMETER INITIALIZATION ==========
 
-    sphere.rotation.y = 0.002;
+    // Sphere
+    sphere.position.x = sphere.posX;
+    sphere.position.y = sphere.posY;
+    sphere.position.z = sphere.posZ;
 
-    // ========== AUTO LOAD TEST ==========
+    sphere.rotation.x = sphere.rotX;
+    sphere.rotation.y = sphere.rotY;
+    sphere.rotation.z = sphere.rotZ;
 
-    // LoadOBJ("sphere8x8.obj");
-    // OffsetOBJ(0,5,0);
-
-    // LoadOBJ("triangle_groundplane.obj");
-
-    // CreateVerticalSheetFixed("cloth");
-    SS1("cloth");
-    togglePlayClip = true;
-
-    // // simulate 1 frame
-    SimulateNextFrame();
-    int itLimit = 1;
-
-
-
-
-
-    /*2-Calculate the vertices of the sphere*/
-    //Generate the vertices of the ball
-    for (int y=0;y<=Y_SEGMENTS;y++)
+    // Generate sphere of size
+    for (int y=0;y<=sphere.ySeg;y++)
     {
-        for (int x=0;x<=X_SEGMENTS;x++)
+        for (int x=0;x<=sphere.xSeg;x++)
         {
+            // generate sphere verticies
             SphereVertices s;
-            float xSegment = (float)x / (float)X_SEGMENTS;
-            float ySegment = (float)y / (float)Y_SEGMENTS;
+            float xSegment = (float)x / (float)sphere.xSeg;
+            float ySegment = (float)y / (float)sphere.ySeg;
             float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
             float yPos = std::cos(ySegment * PI);
             float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
             s.position.x = xPos * scale * sphere.radius;
             s.position.y = yPos * scale * sphere.radius;
             s.position.z = zPos * scale * sphere.radius;
-            // std::cout << xPos << ", " << yPos << ", " << zPos << std::endl;
 
-            s.i1 = (y * (X_SEGMENTS + 1) + x);
-            s.i2 = ((y + 1) * (X_SEGMENTS + 1) + x);
-            s.i3 = ((y + 1) * (X_SEGMENTS + 1) + x+1);
-            s.i4 = (y* (X_SEGMENTS + 1) + x);
-            s.i5 = ((y + 1) * (X_SEGMENTS + 1) + x + 1);
-            s.i6 = (y * (X_SEGMENTS + 1) + x + 1);
+            // calculate sphere faces
+            s.i1 = (y * (sphere.xSeg + 1) + x);
+            s.i2 = ((y + 1) * (sphere.xSeg + 1) + x);
+            s.i3 = ((y + 1) * (sphere.xSeg + 1) + x+1);
+            s.i4 = (y* (sphere.xSeg + 1) + x);
+            s.i5 = ((y + 1) * (sphere.xSeg + 1) + x + 1);
+            s.i6 = (y * (sphere.xSeg + 1) + x + 1);
             sphereVertices.push_back(s);
         }
     }
 
-
-
-
-
-
-
+    // Start with scene playing
+    togglePlayClip = true;
+    loadSwitch = true;
 
 
     // ========== MAIN LOOP ==========
@@ -113,54 +94,49 @@ int main(void)
         // RENDER GL          
         glPushMatrix();
 
-        // Control the position of the scene itself
-        glTranslatef(halfScreenWidth, halfScreenHeight, -500);
-        glRotatef(rotationX, 1, 0, 0);
-        glRotatef(rotationY, 0, 1, 0);
-        glTranslatef(-halfScreenWidth, -halfScreenHeight, 500);
+            // Control the position of the scene itself
+            glTranslatef(halfScreenWidth, halfScreenHeight, -500);
+            glRotatef(rotationX, 1, 0, 0);
+            glRotatef(rotationY, 0, 1, 0);
+            glTranslatef(-halfScreenWidth, -halfScreenHeight, 500);
 
-        if (toggleFocusModel) glTranslatef(-(rootPos[0] * scale), -(rootPos[1] * scale), -(rootPos[2] * scale));
+            if (toggleFocusModel) glTranslatef(-(rootPos[0] * scale), -(rootPos[1] * scale), -(rootPos[2] * scale));
 
+            // Simulate physics for the next frame
+            if (togglePlayClip) SimulateNextFrame();
 
-        if (togglePlayClip) {
-            if (debug) itLimit--;
-            if (itLimit > 0) {
-                if (debug) std::cout << "\n\n\n\n";
-                SimulateNextFrame();      // Function to simulate the next frame
+            // Draw Axis to the screen
+            PlaceAxis();
+
+            // Draw sphere to the screen
+            if (sphere.enable){
+
+                // Creating a iterator pointing to start of set
+                std::list<SphereVertices>::iterator it = sphereVertices.begin();
+
+                lineColour = { 0.7,0.7, 0.7 };
+                while (it != sphereVertices.end()) { // Iterate till the end of set
+
+                    vec3 i1 = (*std::next(sphereVertices.begin(), (it->i1))).position;
+                    vec3 i2 = (*std::next(sphereVertices.begin(), (it->i2))).position;
+                    vec3 i3 = (*std::next(sphereVertices.begin(), (it->i3))).position;
+                    vec3 i4 = (*std::next(sphereVertices.begin(), (it->i4))).position;
+                    vec3 i5 = (*std::next(sphereVertices.begin(), (it->i5))).position;
+                    vec3 i6 = (*std::next(sphereVertices.begin(), (it->i6))).position;
+
+                    if (!ground.enable || i1.y > ground.y * scale) DrawLine(it->position.x, it->position.y, it->position.z, i1.x, i1.y, i1.z, 50);
+                    if (!ground.enable || i2.y > ground.y * scale) DrawLine(it->position.x, it->position.y, it->position.z, i2.x, i2.y, i2.z, 50);
+                    if (!ground.enable || i3.y > ground.y * scale) DrawLine(it->position.x, it->position.y, it->position.z, i3.x, i3.y, i3.z, 50);
+                    if (!ground.enable || i4.y > ground.y * scale) DrawLine(it->position.x, it->position.y, it->position.z, i4.x, i4.y, i4.z, 50);
+                    if (!ground.enable || i5.y > ground.y * scale) DrawLine(it->position.x, it->position.y, it->position.z, i5.x, i5.y, i5.z, 50);
+                    if (!ground.enable || i6.y > ground.y * scale) DrawLine(it->position.x, it->position.y, it->position.z, i6.x, i6.y, i6.z, 50);
+
+                    it++; //Increment the iterator
+                }
             }
-            // SetFrame(currentFrame+1); // KEEP AT CURRENT FRAME FOR NOW
-        }
 
-        PlaceAxis();
-
-
-        // Creating a iterator pointing to start of set
-        std::list<SphereVertices>::iterator it = sphereVertices.begin();
-
-        lineColour = { 0.7,0.7, 0.7 };
-        while (it != sphereVertices.end()) { // Iterate till the end of set
-
-            vec3 i1 = (*std::next(sphereVertices.begin(), (it->i1))).position;
-            vec3 i2 = (*std::next(sphereVertices.begin(), (it->i2))).position;
-            vec3 i3 = (*std::next(sphereVertices.begin(), (it->i3))).position;
-            vec3 i4 = (*std::next(sphereVertices.begin(), (it->i4))).position;
-            vec3 i5 = (*std::next(sphereVertices.begin(), (it->i5))).position;
-            vec3 i6 = (*std::next(sphereVertices.begin(), (it->i6))).position;
-
-            if (i1.y>0) DrawLine(it->position.x, it->position.y, it->position.z, i1.x, i1.y, i1.z, 50);
-            if (i2.y>0) DrawLine(it->position.x, it->position.y, it->position.z, i2.x, i2.y, i2.z, 50);
-            if (i3.y>0) DrawLine(it->position.x, it->position.y, it->position.z, i3.x, i3.y, i3.z, 50);
-            if (i4.y>0) DrawLine(it->position.x, it->position.y, it->position.z, i4.x, i4.y, i4.z, 50);
-            if (i5.y>0) DrawLine(it->position.x, it->position.y, it->position.z, i5.x, i5.y, i5.z, 50);
-            if (i6.y>0) DrawLine(it->position.x, it->position.y, it->position.z, i6.x, i6.y, i6.z, 50);
-
-
-
-            it++; //Increment the iterator
-        }
-
-        DrawMesh();     // Draw OBJ to screen
-
+            // Draw cloth mesh to the screen
+            DrawMesh();
 
 
         glPopMatrix();
@@ -204,6 +180,160 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             case GLFW_KEY_LEFT:
                 rotationY -= rotationSpeed;
                 break;
+
+            case GLFW_KEY_0:
+                std::cout<< "Empty Simulation Environment" << std::endl;
+                Clear();
+                sphere.enable=false;
+                wind.enable=false;
+                break;
+
+            case GLFW_KEY_1:
+                std::cout<< "Simulation Scenario 1" << std::endl;
+                SS1("cloth");
+                break;
+
+            case GLFW_KEY_2:
+                std::cout<< "Simulation Scenario 1+" << std::endl;
+                SS1R("cloth");
+                break;
+
+            case GLFW_KEY_3:
+                std::cout<< "Simulation Scenario 2" << std::endl;
+                SS2("cloth");
+                break;
+
+            case GLFW_KEY_4:
+                std::cout<< "Simulation Scenario 2+" << std::endl;
+                SS2W("cloth");
+                break;
+
+            case GLFW_KEY_5:
+                std::cout<< "Simulation Scenario Corner Test" << std::endl;
+                SimFixCorners("cloth");
+                break;
+
+            case GLFW_KEY_6:
+                std::cout<< "Simulation Scenario Side Test - 1" << std::endl;
+                SimFixSides("cloth", 1);
+                break;
+            case GLFW_KEY_7:
+                std::cout<< "Simulation Scenario Side Test - 2" << std::endl;
+                SimFixSides("cloth", 2);
+                break;
+            case GLFW_KEY_8:
+                std::cout<< "Simulation Scenario Side Test - 3" << std::endl;
+                SimFixSides("cloth", 3);
+                break;
+            case GLFW_KEY_9:
+                std::cout<< "Simulation Scenario Side Test - 4" << std::endl;
+                SimFixSides("cloth", 4);
+                break;
+
+            case GLFW_KEY_G:    // TOGGLE Ground
+                ground.enable = !ground.enable;
+                break;
+
+            case GLFW_KEY_A:    // TOGGLE Axis
+                enableAxis = !enableAxis;
+                break;
+
+            case GLFW_KEY_P:    // PAUSE Simulation
+                if (togglePlayClip) {
+                    std::cout<< "Play Simulation: " << togglePlayClip << std::endl;
+                    togglePlayClip = !togglePlayClip;
+                }else{
+                    std::cout<< "Play Simulation: " << togglePlayClip << std::endl;
+                    togglePlayClip = !togglePlayClip;
+                }
+                break;
+
+                // Toggle sphere rotation.
+            case GLFW_KEY_X:
+                if (sphere.rotate) {
+                    std::cout<< "Sphere Rotation: " << sphere.rotate << std::endl;
+                    sphere.rotate = !sphere.rotate;
+                }else{
+                    std::cout<< "Sphere Rotation: " << sphere.rotate << std::endl;
+                    sphere.rotate = !sphere.rotate;
+                }
+                break;
+
+                // Toggle sphere.
+            case GLFW_KEY_C:
+                if (sphere.enable) {
+                    std::cout<< "Sphere: " << sphere.enable << std::endl;
+                    sphere.enable = !sphere.enable;
+                }else{
+                    std::cout<< "Sphere: " << sphere.enable << std::endl;
+                    sphere.enable = !sphere.enable;
+                }
+                break;
+
+                // Toggle wind         (modelled as a steady force in a fixed direction).
+            case GLFW_KEY_W:
+                if (wind.enable) {
+                    std::cout<< "Wind: " << wind.enable << std::endl;
+                    wind.enable = !wind.enable;
+                }else{
+                    std::cout<< "Wind: " << wind.enable << std::endl;
+                    wind.enable = !wind.enable;
+                }
+                break;
+
+                // Toggle wind realism (introduces some variation to the wind strength on the cloth mesh).
+            case GLFW_KEY_R:
+                if (wind.realism) {
+                    std::cout<< "Wind Realism: " << wind.realism << std::endl;
+                    wind.realism = !wind.realism;
+                }else{
+                    std::cout<< "Wind Realism: " << wind.realism << std::endl;
+                    wind.realism = !wind.realism;
+                }
+                break;
+
+                // Increase/Decrease cloth width
+            case GLFW_KEY_KP_DIVIDE:
+                clothW++;
+                std::cout<< "Cloth Dimensions: (" << clothW << "," << clothH << ")" << std::endl;
+                break;
+
+            case GLFW_KEY_KP_MULTIPLY:
+                if (clothW>1) clothW--;
+                std::cout<< "Cloth Dimensions: (" << clothW << "," << clothH << ")" << std::endl;
+                break;
+
+                // Increase/Decrease cloth length
+            case GLFW_KEY_KP_SUBTRACT:
+                if (clothH>1) clothH--;
+                std::cout<< "Cloth Dimensions: (" << clothW << "," << clothH << ")" << std::endl;
+                break;
+
+            case GLFW_KEY_KP_ADD:
+                clothH++;
+                std::cout<< "Cloth Dimensions: (" << clothW << "," << clothH << ")" << std::endl;
+                break;
+
+
+                // Slow down / Speed up sphere
+            case GLFW_KEY_COMMA:
+                if (sphere.rotation.y>1) sphere.rotation.y-=1;
+                std::cout<< "Sphere Speed: " << sphere.rotation.y << std::endl;
+                break;
+            case GLFW_KEY_PERIOD:
+                if (sphere.rotation.y<40) sphere.rotation.y+=1;
+                std::cout<< "Sphere Speed: " << sphere.rotation.y << std::endl;
+                break; 
+
+                // Slow down / Speed up simulation.
+            case GLFW_KEY_RIGHT_BRACKET:
+                if (damp < 0.001) damp+=0.00005;
+                std::cout<< "Simulation Speed: " << damp << std::endl;
+                break;
+            case GLFW_KEY_LEFT_BRACKET:
+                if (damp > 0.00005) damp-=0.00005;
+                std::cout<< "Simulation Speed: " << damp << std::endl;
+                break;  
 
             }
         }
@@ -275,15 +405,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 // calculate particle vector if particle hits a boundary - return new vector
 vElement PhysicsBounds(vElement v) {
 
-    if (v.position.y < 0) {
-        v.position.y = 0;
-        v.force.x = -v.force.x * friction;
-        v.force.y =  v.force.y * friction;
-        v.force.z =  v.force.z * friction;
-
-        v.velocity.x = -v.velocity.x * friction;
-        v.velocity.y =  v.velocity.y * friction;
-        v.velocity.z =  v.velocity.z * friction;
+    // Check for ground colission
+    if (v.position.y < ground.y && ground.enable) {
+        v.position.y = ground.y;
     }
 
     if (sphere.enable) {
@@ -292,6 +416,9 @@ vElement PhysicsBounds(vElement v) {
         // if vertex is inside sphere 
         if (sphereDistance <= sphere.radius){
 
+            // move any vertex inside the sphere to the closest point on the surface of the sphere.
+            if (sphere.rotate) v.position = RotateVertex(v.position);
+            
             // shunt point to exterior of sphere
             vec3 sphereToPoint;
             sphereToPoint.x = v.position.x - sphere.position.x;
@@ -307,7 +434,12 @@ vElement PhysicsBounds(vElement v) {
             v.position.z = sphereToPoint.z * sphere.radius;
 
             // if sphere is rotating, impart some momentum onto it
-            v.position = RotateVertex(v.position);
+            // {
+            //     vec3 forceTarget = RotateVertex(v.position);
+            //     v.velocity.x -= (v.position.x - forceTarget.x)/damp;
+            //     v.velocity.y -= (v.position.y - forceTarget.y)/damp;
+            //     v.velocity.z -= (v.position.z - forceTarget.z)/damp;
+            // }
         }
 
     }
@@ -315,12 +447,12 @@ vElement PhysicsBounds(vElement v) {
     return v;
 }
 
-// Distance between two vertices
+// Distance between two vertices in 3D space
 float VertexDistance(vec3 p1, vec3 p2) {
     return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2) + pow(p1.z - p2.z, 2));
 }
 
-//
+// Normalizes a vector
 vec3 Normalize(vec3 v) {
 
     float length = sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2));
@@ -332,10 +464,8 @@ vec3 Normalize(vec3 v) {
     return v;
 }
 
-//
+// Calculates physical forces for a single vertex
 void PhysicsSpring(int pIndex) {
-
-    if (debug) std::cout << "\nPhysicsSpring index: " << pIndex << "\n---------------------" << std::endl;
 
     vec3 springVector;
     vec3 force;
@@ -345,15 +475,10 @@ void PhysicsSpring(int pIndex) {
     int i = -1;
     while (it != (*std::next(vList.begin(), pIndex)).fIndex.end()) { // Iterate till the end of set
         i++;
-        if (debug && i > 0) std::cout << "------------------------------------------" << std::endl;
-
 
         vElement p1 = (*std::next(vList.begin(), pIndex));
         vElement p2 = (*std::next(vList.begin(), (*it)));
-        // if (debug) std::cout << "\tP1 - Pos         (" << (*std::next(vList.begin(), pIndex)).x << ", " << (*std::next(vList.begin(), pIndex)).y << ", " << (*std::next(vList.begin(), pIndex)).z << ")" << std::endl;
-        // if (debug) std::cout << "\tP2 - Pos         (" << (*std::next(vList.begin(), (*it))).x << ", " << (*std::next(vList.begin(), (*it))).y << ", " << (*std::next(vList.begin(), (*it))).z << ")" << std::endl;
 
-        // X(current) is just the current length of the spring, and X(rest), the spring's rest length, needs to be stored in each spring structure. 
         springVector.x = p1.position.x - p2.position.x;
         springVector.y = p1.position.y - p2.position.y;
         springVector.z = p1.position.z - p2.position.z;
@@ -361,95 +486,71 @@ void PhysicsSpring(int pIndex) {
         float xCurrent = VertexDistance(p1.position, p2.position);
         float xRest = (*std::next(p1.fDistance.begin(), i));
         float distanceFromRest = xCurrent - xRest;
-        // if (debug) std::cout << "\tdistanceFromRest: " << distanceFromRest << std::endl;
-
 
         float hookesValue = -k * distanceFromRest;
-        // if (debug) std::cout << "\thookesValue:      " << hookesValue << std::endl;
-
 
         springVector = Normalize(springVector);
-        // if (debug) std::cout << "\tspringVector     (" << springVector.x << ", " << springVector.y << ", " << springVector.z << ")" << std::endl;
 
         // calculate force
         force.x = (springVector.x * hookesValue);
         force.y = (springVector.y * hookesValue);
         force.z = (springVector.z * hookesValue);
-        // if (debug) std::cout << "\tforce            (" << force.x << ", " << force.y << ", " << force.z << ")" << std::endl;
 
-        // if (debug) std::cout << "\tP1 - PreForce    (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
         p1.force.x = (p1.force.x + force.x);
         p1.force.y = (p1.force.y + force.y);
         p1.force.z = (p1.force.z + force.z);
-        // if (debug) std::cout << "\tP1 - PostForce   (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
+
         (*std::next(vList.begin(), pIndex)).force = p1.force;
-        // if (debug) std::cout << "\tP1 - STOREDForce ("  << (*std::next(vList.begin(), pIndex)).force.x << ", " 
-        //                                                 << (*std::next(vList.begin(), pIndex)).force.y << ", " 
-        //                                                 << (*std::next(vList.begin(), pIndex)).force.z << ")" << std::endl;
 
-        // p2.force.x = ( p2.force.x - springVector.force.x);
-        // p2.force.y = ( p2.force.y - springVector.force.y);
-        // p2.force.z = ( p2.force.z - springVector.force.z);
         (*std::next(vList.begin(), (*it))).force = p2.force;
-
 
         it++; //Increment the iterator
     }
-
-    if (debug) std::cout << "\n";
-
 }
 
-//
+// Applies physical forces to each vertex
 vElement PhysicsApply(vElement p1)
 {
 
     if (!p1.fixed) {
-        if (debug) std::cout << "\tGravity         (" << gravity.x << ", " << gravity.y << ", " << gravity.z << ")" << std::endl;
 
         // if(!particles[i].isStationary()) {
-        if (enableGravity) {
+        if (gravity.enable) {
             p1.force.x = (p1.force.x + gravity.x * p1.mass);
             p1.force.y = (p1.force.y + gravity.y * p1.mass);
             p1.force.z = (p1.force.z + gravity.z * p1.mass);
         }
 
-        if (enableWind) {
-            if (enableWindRealism) {
-                srand((unsigned)time(0));
-                float windRand;
-                windRand = (float)(rand() % 10 + 1);
-                p1.force.x += wind.x - (wind.x * windRand * 0.01 + (p1.position.x * .004));
-                p1.force.y += wind.y - (wind.y * windRand * 0.01 + (p1.position.y * .004));
-                p1.force.z += wind.z - (wind.z * windRand * 0.01 + (p1.position.z * .004));
-            }
-            else {
+        if (wind.enable) {
+            if (wind.realism) {     // Model wind more realistically with random variation
+                std::mt19937_64 gen{ std::random_device()() };
+                std::uniform_real_distribution<double> dis{ 0.5, 1.0 };
+
+                p1.force.x += wind.x * dis(gen);
+                p1.force.y += wind.y * dis(gen);
+                p1.force.z += wind.z * dis(gen);
+            
+            } else {                // Model wind as a steady force in a fixed direction
                 p1.force.x += wind.x;
                 p1.force.y += wind.y;
                 p1.force.z += wind.z;
             }
         }
 
-        // if (debug) std::cout << "\tP1 - Force+Grav (" << p1.f.x << ", " << p1.f.y << ", " << p1.f.z << ")" << std::endl;
-
-        // particles[i].setVelocity(particles[i].getVelocity() + (particles[i].getForce() / (particles[i].getMass() * timeStep)));
         p1.velocity.x = p1.velocity.x + (p1.force.x / (p1.mass * timeStep));
         p1.velocity.y = p1.velocity.y + (p1.force.y / (p1.mass * timeStep));
         p1.velocity.z = p1.velocity.z + (p1.force.z / (p1.mass * timeStep));
 
-        // particles[i].setVelocity(particles[i].getVelocity() * damp);
         p1.velocity.x = p1.velocity.x * damp;
         p1.velocity.y = p1.velocity.y * damp;
         p1.velocity.z = p1.velocity.z * damp;
 
-
-        p1 = PhysicsBounds(p1);
-        // particles[i].setPosition(particles[i].getPosition() + (particles[i].getVelocity() * timeStep));
         p1.position.x = p1.position.x + (p1.velocity.x * timeStep);
         p1.position.y = p1.position.y + (p1.velocity.y * timeStep);
         p1.position.z = p1.position.z + (p1.velocity.z * timeStep);
 
-        // particles[i].setForce(Vector(0.0f, 0.0f, 0.0f));
+        p1 = PhysicsBounds(p1);
+
         p1.force.x = 0;
         p1.force.y = 0;
         p1.force.z = 0;
@@ -459,7 +560,7 @@ vElement PhysicsApply(vElement p1)
     return p1;
 }
 
-//
+// Simulates physics for the next frame
 void SimulateNextFrame()
 {
 
@@ -481,11 +582,7 @@ void SimulateNextFrame()
     for (it = vList.begin(); it != vList.end(); it++) {
         i++;
 
-        if (debug) std::cout << "\nPhysicsApply index: " << i << "\n---------------------" << std::endl;
-        if (debug && i > 0) std::cout << "------------------------------------------" << std::endl;
-
         (*std::next(vList.begin(), i)) = PhysicsApply((*std::next(vList.begin(), i)));
-        if (debug) std::cout << " \n";
     }
 }
 
@@ -493,20 +590,15 @@ void SimulateNextFrame()
 vElement LogVertexDistances(vElement v)
 {
 
-    if (debug) std::cout << "> DISTANCES";
-
     std::set<int>::iterator it = v.fIndex.begin();  // Creating a iterator pointing to start of set
     while (it != v.fIndex.end()) {                  // Iterate till the end of set
 
         // log the distance between the two vertices
         v.fDistance.push_back(VertexDistance(v.position, (*std::next(vList.begin(), (*it))).position));
 
-        // if (debug) std::cout << "   " << (*it) << "_" << VertexDistance( v.position, (*std::next(vList.begin(), (*it))).position );
-
         it++;                                       //Increment the iterator
     }
 
-    if (debug) std::cout << std::endl;
     return v;
 }
 
@@ -637,9 +729,6 @@ void DrawCube(GLfloat centerPosX, GLfloat centerPosY, GLfloat centerPosZ, GLfloa
 
     glDisableClientState(GL_VERTEX_ARRAY);
 
-    // std::cout << centerPosX - halfSideLength << centerPosY + halfSideLength << centerPosZ + halfSideLength << std::endl;
-    // std::cout << centerPosX + halfSideLength << centerPosY - halfSideLength << centerPosZ - halfSideLength << std::endl;
-
 }
 
 
@@ -672,11 +761,6 @@ void Clear()
 // loads an object to the scene
 int LoadOBJ(std::string file)
 {
-
-    /* REQUIRES MODIFICATION TO ALLOW FOR 2 SEPERATE OBJECTS TO BE LOADED AT ONCE
-        OBJ 1 = Cloth or Misc object
-        OBJ 2 = Table or Sphere
-    */
 
     Clear();
 
@@ -763,7 +847,6 @@ int LoadOBJ(std::string file)
             f.v3 = vertInd[2] - 1;
 
             fList.push_back(f);
-            // vfList.push_back(vElement);
             break;
         }
     }
@@ -840,7 +923,6 @@ void OffsetOBJ(float x, float y, float z) {
         (*std::next(vList.begin(), i)).position.y += y;
         (*std::next(vList.begin(), i)).position.z += z;
 
-        // std::cout << "(" << it->x << ",\t" << it->y << ",\t" << it->z << ") " << std::endl;
     }
 }
 
@@ -859,87 +941,6 @@ void OffsetOBJ(float x, float y, float z) {
 //                                //
 //--------------------------------//
 
-void CreateVerticalSheet(std::string objFile, int sizeX, int sizeY)
-{
-    Clear();
-
-    int offsetX = -2.5;
-    int offsetY = 0;
-
-    // int sizeX = 5;
-    // int sizeY = 4;
-
-    int y = 0;
-    while (y != sizeY) {
-
-        int x = 0;
-        // std::cout<< "" <<std::endl;
-        while (x != sizeX) {
-
-            // std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
-
-            vElement v;
-            v.position.x = x + offsetX;
-            v.position.y = -y;
-            v.position.z = 0;
-            vList.push_back(v);
-
-
-
-            x++;
-        }
-        y++;
-    }
-
-
-
-    y = 0;
-    while (y != sizeY - 1) {
-
-        int x = 0;
-        // std::cout<< "" <<std::endl;
-        while (x != sizeX - 1) {
-
-            int i = (sizeX * y) + x + 1;
-            // std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
-            // std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
-            // std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
-            // std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//"       <<std::endl;
-            i -= 1;
-
-            fElement f;
-            f.v1 = i;
-            f.v2 = i + 1;
-            f.v3 = i + sizeX;
-            fList.push_back(f);
-            f.v1 = i + 1;
-            f.v2 = i + sizeX;
-            f.v3 = i + sizeX + 1;
-            fList.push_back(f);
-            f.v1 = i + sizeX;
-            f.v2 = i + sizeX + 1;
-            f.v3 = i;
-            fList.push_back(f);
-            f.v1 = i + sizeX + 1;
-            f.v2 = i;
-            f.v3 = i + 1;
-            fList.push_back(f);
-
-            x++;
-        }
-        y++;
-    }
-
-    SaveOBJ(objFile + ".obj");
-    LoadOBJ(objFile + ".obj");
-
-    OffsetOBJ(0, 5, 0);
-    (*std::next(vList.begin(), 0)).fixed = true;
-    (*std::next(vList.begin(), 4)).fixed = true;
-
-}
-
-
 void SS1(std::string objFile)
 {
     /*
@@ -947,13 +948,15 @@ void SS1(std::string objFile)
         then free-falls onto a sphere on the ground.
     */
 
-    CreateHorizontalSheet(objFile, 10, 10);
+    CreateHorizontalSheet(objFile, clothW, clothH);
     SaveOBJ(objFile + ".obj");
     LoadOBJ(objFile + ".obj");
-    FixClothSides(10, 10);
 
+    wind.enable = false;
+    sphere.enable = true;
+    sphere.rotate = false;
+    ground.y = -2;
 
-    OffsetOBJ(0, 5, -1.5);
 }
 
 void SS2(std::string objFile)
@@ -962,6 +965,21 @@ void SS2(std::string objFile)
         Simulation Scenario 2 (SS2): a square piece of cloth floating horizontally in the air first, then
         free-falling with two adjacent corners fixed in the space.
     */
+
+    CreateHorizontalSheet(objFile, clothW, clothH);
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+
+    // fix two adjacent corners
+    (*std::next(vList.begin(), 0)).fixed = true;
+    (*std::next(vList.begin(), clothW-1)).fixed = true;
+
+
+    wind.enable = false;
+    sphere.enable = false;
+    ground.y = -2;
+
+
 }
 
 void SS1R(std::string objFile)
@@ -973,6 +991,17 @@ void SS1R(std::string objFile)
         SS1 with the sphere rotating in-place round the Y axis (up-axis) and friction between the sphere
         and the cloth.
     */
+
+    CreateHorizontalSheet(objFile, clothW, clothH);
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+
+    wind.enable = false;
+    sphere.enable = true;
+    sphere.rotate = true;
+    ground.y = -2;
+
+
 }
 
 void SS2W(std::string objFile)
@@ -983,87 +1012,94 @@ void SS2W(std::string objFile)
 
         SS2 with wind blowing.
     */
-}
 
-
-void FixClothSides(int sizeX, int sizeY)
-{
-    int y = 0;
-    int x = 0;
-
-
-    // k = 100; // srping constant
-    // gravity.y *=2;
-
-    while (x != sizeX) {
-        (*std::next(vList.begin(), x)).fixed = true;
-        // (*std::next(vList.begin(), x*sizeX)).fixed = true;
-        // (*std::next(vList.begin(), (x*sizeX)+sizeX-1)).fixed = true;
-        // (*std::next(vList.begin(), x+(sizeX*sizeY)-sizeX)).fixed = true;
-
-        x++;
-    }
-    // (*std::next(vList.begin(), (int)(sizeX*sizeY*.5))).fixed = true;
-}
-/*
-// SS2
-void SS2(std::string objFile)
-{
-
-    CreateHorizontalSheet(objFile);
-
+    CreateHorizontalSheet(objFile, clothW, clothH);
     SaveOBJ(objFile + ".obj");
     LoadOBJ(objFile + ".obj");
 
-    OffsetOBJ(0,5,-1.5);
+    // fix two adjacent corners
     (*std::next(vList.begin(), 0)).fixed = true;
-    (*std::next(vList.begin(), sizeY-1)).fixed = true;
-    (*std::next(vList.begin(), 90)).fixed = true;
-    (*std::next(vList.begin(), 99)).fixed = true;
-    (*std::next(vList.begin(), 79)).fixed = true;
-    (*std::next(vList.begin(), 59)).fixed = true;
-    (*std::next(vList.begin(), 39)).fixed = true;
-}*/
+    (*std::next(vList.begin(), clothW-1)).fixed = true;
 
+
+    wind.enable = true;
+    wind.x = -5;
+    wind.y = 0;
+    wind.z = -5;
+    sphere.enable = false;
+    ground.y = -2;
+}
+
+void SimFixCorners(std::string objFile)
+{
+    // A square piece of cloth floating horizontally in the air first, then free-falling with
+    // four corners fixed in the space.
+
+    CreateHorizontalSheet(objFile, clothW, clothH);
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+
+    // fix four adjacent corners
+    (*std::next(vList.begin(), 0)).fixed = true;
+    (*std::next(vList.begin(), clothW-1)).fixed = true;
+
+    (*std::next(vList.begin(), (clothH*clothW)-clothW)).fixed = true;
+    (*std::next(vList.begin(), (clothH*clothW)-1)).fixed = true;
+
+    wind.enable = false;
+    sphere.enable = false;
+    ground.y = -2;
+
+}
+
+void SimFixSides(std::string objFile, int sides)
+{
+    // A square piece of cloth floating horizontally in the air first, then free-falling with
+    // all edges fixed in the space.
+
+    CreateHorizontalSheet(objFile, clothW, clothH);
+    SaveOBJ(objFile + ".obj");
+    LoadOBJ(objFile + ".obj");
+
+    int i = 0;
+    while (i != clothW) {
+        if (sides==4 || sides==3 || sides==2 || sides==1) (*std::next(vList.begin(), i)).fixed = true;
+        if (sides==4 || sides==3) (*std::next(vList.begin(), i+(clothH*clothW)-clothW)).fixed = true;
+        i++;
+    }
+
+    i = 0;
+    while (i != clothH) {
+        if (sides==4 || sides==3 || sides==2) (*std::next(vList.begin(), (i*clothW))).fixed = true;
+        if (sides==4) (*std::next(vList.begin(), (i*clothW)+clothW-1)).fixed = true;
+        i++;
+    }
+}
+
+// Creates a horizontal piece of cloth
 void CreateHorizontalSheet(std::string objFile, int sizeX, int sizeY)
 {
     Clear();
 
-    /* ---------- SIM SETTINGS ---------- */
-    // These optimal sim settings for the demo environment
-    // if (demoMode)
-    // {
-    //     friction     = 0.00005;
-    //     enableGravity = true;
-    //     damp         = 0.001;
-    //     timeStep     = 0.01;
-    //     k = 40;      // srping constant
-    //     gravity.y *= 1;
-    // }
-
-
     /* ---------- CREATE CLOTH ---------- */
-    int offsetX = -2.5;
-    int offsetY = 0;
+    int offsetX = -(sizeX-1)*.5;
+    int offsetY = -(sizeY-1)*.5;
 
     float scale = 0.5;
 
+    // Define the verticies of the cloth
     int y = 0;
     while (y != sizeY) {
 
         int x = 0;
-        // std::cout<< "" <<std::endl;
-        while (x != sizeX) {
 
-            // std::cout<< "v "<< x << " " << -y << " "  << "0.0" <<std::endl;
+        while (x != sizeX) {
 
             vElement v;
             v.position.x = (x + offsetX) * scale;
             v.position.y = 0;
-            v.position.z = (y)*scale;
+            v.position.z = (y + offsetY)*scale;
             vList.push_back(v);
-
-
 
             x++;
         }
@@ -1071,7 +1107,7 @@ void CreateHorizontalSheet(std::string objFile, int sizeX, int sizeY)
     }
 
 
-
+    // Define the faces between the verticies
     y = 0;
     while (y != sizeY - 1) {
 
@@ -1080,10 +1116,7 @@ void CreateHorizontalSheet(std::string objFile, int sizeX, int sizeY)
         while (x != sizeX - 1) {
 
             int i = (sizeX * y) + x + 1;
-            // std::cout<< "f "<< i         << "// " << i+1        << "// "  << i+sizeX    << "//" <<std::endl;
-            // std::cout<< "f "<< i+1       << "// " << i+sizeX    << "// "  << i+sizeX+1  << "//" <<std::endl;
-            // std::cout<< "f "<< i+sizeX   << "// " << i+sizeX+1  << "// "  << i          << "//" <<std::endl;
-            // std::cout<< "f "<< i+sizeX+1 << "// " << i          << "// "  << i+1        << "//" <<std::endl;
+
             i -= 1;
 
             fElement f;
@@ -1108,6 +1141,7 @@ void CreateHorizontalSheet(std::string objFile, int sizeX, int sizeY)
         }
         y++;
     }
+    OffsetOBJ(0, 5, 0);      // offset cloth
 }
 
 
@@ -1137,23 +1171,6 @@ std::vector<float> MultMatrix(std::vector<float> m0, std::vector<float> m1)
         0,0,0,0
     };
 
-    // for (int ny = 0; ny < 4; ny++)
-    // {
-    //     // std::cout << "---------------\n";
-    //     for (int nx = 0; nx < 4; nx++)
-    //     {
-    //         // std::cout << "M[" << (ny*4)+nx << "]\n";
-    //         // std::cout << "\t " << ((ny*4)+0) << "\t" << (nx + 0) << "\n";
-    //         // std::cout << "\t " << ((ny*4)+1) << "\t" << (nx + 4) << "\n";
-    //         // std::cout << "\t " << ((ny*4)+2) << "\t" << (nx + 8) << "\n";
-    //         // std::cout << "\t " << ((ny*4)+3) << "\t" << (nx + 12) << "\n";
-
-    //         M[(ny*4)+nx] =  ( m0[(ny*4)+0] * m1[nx + 0]  ) + 
-    //                         ( m0[(ny*4)+1] * m1[nx + 4]  ) + 
-    //                         ( m0[(ny*4)+2] * m1[nx + 8]  ) + 
-    //                         ( m0[(ny*4)+3] * m1[nx + 12] ); 
-    //     }
-    // }
 
     M =
     {
@@ -1186,46 +1203,36 @@ std::vector<float> MultMatrix(std::vector<float> m0, std::vector<float> m1)
 vec3 RotateVertex(vec3 v)
 {
 
-    // vector<float> mZ = // Matrix RotateZ
-    // {
-    //  cos(sphere.rotation.z), -sin(sphere.rotation.z), 0, 0, 
-    //  sin(sphere.rotation.z),  cos(sphere.rotation.z), 0, 0, 
-    //            0,            0, 1, 0, 
-    //            0,            0, 0, 1, 
-    // };
-
-    vector<float> mY = // Matrix RotateY
-    {
-      cos(sphere.rotation.y), 0, sin(sphere.rotation.y), 0, 
-                0, 1,           0, 0, 
-     -sin(sphere.rotation.y), 0, cos(sphere.rotation.y), 0, 
-                0, 0,           0, 1, 
-    };
-
-
     vec3 newV;
+
     // Calculate Rotation Matrix
     newV.x = v.x*mY[0]  + v.y*mY[1] + v.z*mY[2];
     newV.y = v.x*mY[4]  + v.y*mY[5] + v.z*mY[6];
     newV.z = v.x*mY[8]  + v.y*mY[9] + v.z*mY[10];
-
 
     return newV;
 }
 
 void RotateSphere()
 {
-        // Creating a iterator pointing to start of set
-        std::list<SphereVertices>::iterator it = sphereVertices.begin();
+    mY = // Matrix RotateY
+    {
+      cos(sphere.rotation.y * damp), 0, sin(sphere.rotation.y * damp), 0, 
+                0, 1,           0, 0, 
+     -sin(sphere.rotation.y * damp), 0, cos(sphere.rotation.y * damp), 0, 
+                0, 0,           0, 1, 
+    };
 
-        int i = -1;
-        while (it != sphereVertices.end()) { // Iterate till the end of set
-            i++;
-            (*std::next(sphereVertices.begin(), i)).position = RotateVertex((*std::next(sphereVertices.begin(), i)).position);
+    // Creating a iterator pointing to start of set
+    std::list<SphereVertices>::iterator it = sphereVertices.begin();
 
-            it++; //Increment the iterator
-        }
+    int i = -1;
+    while (it != sphereVertices.end()) { // Iterate till the end of set
+        i++;
+        (*std::next(sphereVertices.begin(), i)).position = RotateVertex((*std::next(sphereVertices.begin(), i)).position);
 
+        it++; //Increment the iterator
+    }
 }
 
 
@@ -1310,38 +1317,52 @@ void DrawMesh()
 // Draws the axis to the scene 
 void PlaceAxis()
 {
-    // ----- ORIGIN -----
-    // Red Line
-    lineColour[0] = 255;
-    lineColour[1] = 0;
-    lineColour[2] = 0;
-    DrawLine(0, 0, 0, 100, 0, 0, 50);
+    if (enableAxis){
 
-    // Green Line
-    lineColour[0] = 0;
-    lineColour[1] = 255;
-    lineColour[2] = 0;
-    DrawLine(0, 0, 0, 0, 100, 0, 50);
+        // ----- ORIGIN -----
+        // Red Line
+        lineColour[0] = 255;
+        lineColour[1] = 0;
+        lineColour[2] = 0;
+        DrawLine(0, 0, 0, 100, 0, 0, 50);
 
-    // Blue Line
-    lineColour[0] = 0;
-    lineColour[1] = 0;
-    lineColour[2] = 255;
-    DrawLine(0, 0, 0, 0, 0, 100, 50);
+        // Green Line
+        lineColour[0] = 0;
+        lineColour[1] = 255;
+        lineColour[2] = 0;
+        DrawLine(0, 0, 0, 0, 100, 0, 50);
+
+        // Blue Line
+        lineColour[0] = 0;
+        lineColour[1] = 0;
+        lineColour[2] = 255;
+        DrawLine(0, 0, 0, 0, 0, 100, 50);
+    }
 
 
-    // ----- GRID -----
-    lineColour = { 0.7, 0.7, 0.7 }; // Light grey color
+    // Draw Line from axis in wind direction
+    if (wind.enable){
 
-    float gridWidth = 1000;
-    float cubeSpace = 200;
-    for (int x = -5; x < 6; x++)
-    {
-        DrawLine(   (x * cubeSpace), 0, -gridWidth,
-                    (x * cubeSpace), 0,  gridWidth, 0);
+        lineColour = { 0.8, 0.0, 0.8 }; // Light grey color
+        DrawLine(   0, 0, 0,
+                    wind.x*scale, wind.y*scale,  wind.z*scale, 0);
+    }
 
-        DrawLine(  -gridWidth, 0, (x * cubeSpace),
-                    gridWidth, 0, (x * cubeSpace), 0);
+    if (ground.enable){
+
+        // ----- GRID -----
+        lineColour = { 0.7, 0.7, 0.7 }; // Light grey color
+
+        float gridWidth = 1000;
+        float cubeSpace = 200;
+        for (int x = -5; x < 6; x++)
+        {
+            DrawLine(   (x * cubeSpace) + ground.x, ground.y*scale, -gridWidth + ground.z,
+                        (x * cubeSpace) + ground.x, ground.y*scale,  gridWidth + ground.z, 0);
+
+            DrawLine(  -gridWidth + ground.x, ground.y*scale, (x * cubeSpace) + ground.z,
+                        gridWidth + ground.x, ground.y*scale, (x * cubeSpace) + ground.z, 0);
+        }
     }
 }
 
